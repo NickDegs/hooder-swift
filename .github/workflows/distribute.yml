@@ -1,0 +1,35 @@
+name: TestFlight Distribute
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_notes:
+        description: "Sürüm notları"
+        required: false
+        default: "Yeni güncelleme: Swift native, 3D Mapbox harita."
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  distribute:
+    name: Distribute to Testers
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Distribute
+        env:
+          ASC_KEY_ID:    ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY:   ${{ secrets.ASC_API_KEY }}
+          ASC_TEAM_ID:   ${{ secrets.ASC_TEAM_ID }}
+          RELEASE_NOTES: ${{ github.event.inputs.release_notes }}
+        run: bundle exec fastlane distribute
