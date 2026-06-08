@@ -1,0 +1,30 @@
+# Xcode generated — never commit
+*.xcodeproj/
+*.xcworkspace/
+DerivedData/
+build/
+.build/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+
+# Ruby
+.bundle/
+vendor/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# SPM
+.swiftpm/
+SourcePackages/
+
+# Env
+.env
+*.p12
+*.mobileprovision
