@@ -19,8 +19,8 @@ extension Font {
     static let tabLabel = Font.system(size:  9, weight: .bold,      design: .default)
 }
 
-extension View {
-    func tracked(_ spacing: CGFloat) -> some View {
+extension Text {
+    func tracked(_ spacing: CGFloat) -> Text {
         self.kerning(spacing)
     }
 }

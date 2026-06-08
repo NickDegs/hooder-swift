@@ -1,6 +1,6 @@
 import SwiftUI
 
-private struct LeaderEntry: Identifiable {
+fileprivate struct LeaderEntry: Identifiable {
     let id: Int
     let name: String
     let netWorth: Int
@@ -9,7 +9,7 @@ private struct LeaderEntry: Identifiable {
     let isPlayer: Bool
 }
 
-private func buildLeaderboard(player: GameStore) -> [LeaderEntry] {
+fileprivate func buildLeaderboard(player: GameStore) -> [LeaderEntry] {
     let bots: [(String, Int, Int, String)] = [
         ("Sheikh Al-Rashid",  890_000_000, 47, "🇦🇪"),
         ("Victoria Blackwood",750_000_000, 39, "🇬🇧"),
