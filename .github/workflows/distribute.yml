@@ -25,7 +25,25 @@ jobs:
           ruby-version: "3.3"
           bundler-cache: true
 
-      - name: Distribute
+      - name: Download latest IPA artifact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p build
+          # Son başarılı build run'ının artifact'ını indir
+          RUN_ID=$(gh run list -R ${{ github.repository }} \
+            --workflow=ios-build.yml \
+            --status=success \
+            --limit=1 \
+            --json databaseId \
+            -q '.[0].databaseId')
+          echo "Latest successful build run: $RUN_ID"
+          gh run download "$RUN_ID" -R ${{ github.repository }} -D ./build/ --pattern "Hooder-IPA-*"
+          # artifact klasöründen ipa'yı taşı
+          find ./build -name "*.ipa" | head -1 | xargs -I{} mv {} ./build/Hooder.ipa
+          ls -lh ./build/Hooder.ipa
+
+      - name: Distribute to testers
         env:
           ASC_KEY_ID:    ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}

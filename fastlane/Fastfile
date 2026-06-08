@@ -80,9 +80,9 @@ platform :ios do
   desc "Mevcut en son build'i TestFlight external testers'a dağıt"
   lane :distribute do
     api_key = asc_key
-    pilot(
+    upload_to_testflight(
       api_key:                           api_key,
-      app_identifier:                    "app.realvirtuality.landlord",
+      ipa:                               "./build/Hooder.ipa",
       distribute_external:               true,
       notify_external_testers:           true,
       changelog:                         ENV.fetch("RELEASE_NOTES", "Yeni güncelleme: Swift native, 3D Mapbox harita."),
@@ -90,8 +90,7 @@ platform :ios do
       beta_app_feedback_email:           "daclen100@gmail.com",
       demo_account_required:             false,
       reject_build_waiting_for_review:   false,
-      skip_waiting_for_build_processing: true,
-      skip_submission:                   false,
+      skip_waiting_for_build_processing: false,
     )
   end
 
