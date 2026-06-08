@@ -72,7 +72,12 @@ platform :ios do
         api_key:                           api_key,
         ipa:                               "./build/Hooder.ipa",
         skip_waiting_for_build_processing: false,
+        distribute_external:               true,
+        notify_external_testers:           true,
         changelog:                         ENV.fetch("RELEASE_NOTES", "Yeni güncelleme: Swift native, 3D harita, animasyonlar."),
+        beta_app_description:              "Hooder — Gerçek zamanlı emlak yatırım oyunu. 3D Mapbox harita, 35 mülk, 7 şehir.",
+        beta_app_feedback_email:           "daclen100@gmail.com",
+        demo_account_required:             false,
       )
     end
   end
