@@ -49,8 +49,10 @@ jobs:
 
       - name: Set build number
         run: |
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" \
+          BUILD_NUM=$(date +%Y%m%d%H%M)
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUM" \
             Hooder/Resources/Info.plist
+          echo "Build number: $BUILD_NUM"
 
       - name: Setup keychain + install cert
         env:
