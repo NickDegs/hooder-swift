@@ -43,7 +43,7 @@ fileprivate func buildLeaderboard(player: GameStore) -> [LeaderEntry] {
 struct RankingsScreen: View {
     @EnvironmentObject var game: GameStore
 
-    var leaders: [LeaderEntry] { buildLeaderboard(player: game) }
+    fileprivate var leaders: [LeaderEntry] { buildLeaderboard(player: game) }
 
     var playerRank: Int {
         (leaders.firstIndex { $0.isPlayer } ?? leaders.count - 1) + 1

@@ -40,12 +40,8 @@ struct CustomTabBar: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, Sp.sm)
-                    .background(
-                        active
-                            ? C.primary.opacity(0.12)
-                                .clipShape(RoundedRectangle(cornerRadius: R.md))
-                            : Color.clear
-                    )
+                    .background(active ? C.primary.opacity(0.12) : Color.clear)
+                    .clipShape(RoundedRectangle(cornerRadius: R.md))
                     .padding(.horizontal, 4)
                 }
                 .buttonStyle(.plain)
