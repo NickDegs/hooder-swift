@@ -12,6 +12,8 @@ COMMON_XCARGS = [
   "SWIFT_COMPILATION_MODE=wholemodule",
   "GCC_OPTIMIZATION_LEVEL=s",
   "MAPBOX_TOKEN=#{ENV.fetch('MAPBOX_TOKEN', '')}",
+  "GOOGLE_CLIENT_ID=#{ENV.fetch('GOOGLE_CLIENT_ID', '')}",
+  "GOOGLE_REVERSED_CLIENT_ID=#{ENV.fetch('GOOGLE_REVERSED_CLIENT_ID', '')}",
 ].join(" ")
 
 platform :ios do
@@ -20,12 +22,24 @@ platform :ios do
   lane :release do
     api_key = asc_key
 
-    # Provisioning profile'ı App Store Connect'ten indir (yoksa oluştur)
+    # Sign in with Apple + iCloud KV capability'lerini etkinleştir (idempotent)
+    produce(
+      api_key:        api_key,
+      app_identifier: "app.realvirtuality.landlord",
+      app_name:       "Hooder",
+      skip_itc:       true,
+      enable_services: {
+        sign_in_with_apple: "on",
+        icloud:             "on",
+      }
+    )
+
+    # Capability değişikliklerini içeren profili zorla yeniden oluştur
     get_provisioning_profile(
       app_identifier: "app.realvirtuality.landlord",
       api_key:        api_key,
       output_path:    "/tmp/fl-certs",
-      force:          false,
+      force:          true,
     )
 
     # Xcode projesini manuel signing için ayarla

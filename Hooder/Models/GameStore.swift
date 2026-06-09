@@ -10,7 +10,6 @@ struct OwnedProperty: Identifiable, Hashable {
     var purchasedAt: Date
     var totalEarned: Int
 
-    // Forward commonly used fields
     var name:         String { property.name }
     var category:     PropertyCategory { property.category }
     var price:        Int { property.price }
@@ -30,14 +29,11 @@ struct OwnedProperty: Identifiable, Hashable {
 
 final class GameStore: ObservableObject {
 
-    // Player
-    @Published var playerName:  String = "Player"
+    @Published var playerName:  String = "Oyuncu"
     @Published var cash:        Int    = 50_000
     @Published var netWorth:    Int    = 50_000
     @Published var level:       Int    = 1
     @Published var xp:          Int    = 0
-
-    // Properties
     @Published var owned:       [OwnedProperty] = []
     @Published var dailyIncome: Int    = 0
     @Published var lastCollect: Date   = Date()
@@ -57,6 +53,7 @@ final class GameStore: ObservableObject {
 
     func setPlayerName(_ name: String) {
         playerName = name
+        save()
     }
 
     @discardableResult
@@ -65,9 +62,10 @@ final class GameStore: ObservableObject {
         let op = OwnedProperty(id: property.id, property: property,
                                purchasedAt: Date(), totalEarned: 0)
         owned.append(op)
-        cash    -= property.price
-        dailyIncome = owned.reduce(0) { $0 + $1.incomePerDay }
-        netWorth = cash + owned.reduce(0) { $0 + $1.price }
+        cash        -= property.price
+        dailyIncome  = owned.reduce(0) { $0 + $1.incomePerDay }
+        netWorth     = cash + owned.reduce(0) { $0 + $1.price }
+        save()
         return true
     }
 
@@ -76,30 +74,78 @@ final class GameStore: ObservableObject {
         let prop = owned[idx]
         let sellPrice = Int(Double(prop.price) * 1.15)
         owned.remove(at: idx)
-        cash    += sellPrice
-        dailyIncome = owned.reduce(0) { $0 + $1.incomePerDay }
-        netWorth = cash + owned.reduce(0) { $0 + $1.price }
+        cash        += sellPrice
+        dailyIncome  = owned.reduce(0) { $0 + $1.incomePerDay }
+        netWorth     = cash + owned.reduce(0) { $0 + $1.price }
+        save()
     }
 
     @discardableResult
     func collectIncome() -> Int {
-        let hours   = min(Date().timeIntervalSince(lastCollect) / 3_600, 24)
-        let earned  = Int(owned.reduce(0.0) { $0 + Double($1.incomePerDay) * hours / 24 })
+        let hours  = min(Date().timeIntervalSince(lastCollect) / 3_600, 24)
+        let earned = Int(owned.reduce(0.0) { $0 + Double($1.incomePerDay) * hours / 24 })
         guard earned > 0 else { return 0 }
         owned = owned.map {
             var p = $0
-            let share = Int(Double($0.incomePerDay) * hours / 24)
-            p.totalEarned += share
+            p.totalEarned += Int(Double($0.incomePerDay) * hours / 24)
             return p
         }
         cash        += earned
         lastCollect  = Date()
         netWorth     = cash + owned.reduce(0) { $0 + $1.price }
+        save()
         return earned
     }
 
     func addCash(_ amount: Int) {
         cash     += amount
         netWorth += amount
+        save()
+    }
+
+    func reset() {
+        playerName  = "Oyuncu"
+        cash        = 50_000
+        netWorth    = 50_000
+        owned       = []
+        dailyIncome = 0
+        level       = 1
+        xp          = 0
+        lastCollect = Date()
+        PersistenceService.shared.delete()
+    }
+
+    // MARK: - Persistence
+
+    func load() {
+        guard let state = PersistenceService.shared.load() else { return }
+        playerName  = state.playerName
+        cash        = state.cash
+        level       = state.level
+        xp          = state.xp
+        lastCollect = state.lastCollect
+        owned = state.ownedProperties.compactMap { ops in
+            guard let prop = allProperties.first(where: { $0.id == ops.propertyID }) else { return nil }
+            return OwnedProperty(id: ops.propertyID, property: prop,
+                                 purchasedAt: ops.purchasedAt, totalEarned: ops.totalEarned)
+        }
+        dailyIncome = owned.reduce(0) { $0 + $1.incomePerDay }
+        netWorth    = cash + owned.reduce(0) { $0 + $1.price }
+    }
+
+    private func save() {
+        let state = GameState(
+            playerName:      playerName,
+            cash:            cash,
+            level:           level,
+            xp:              xp,
+            lastCollect:     lastCollect,
+            ownedProperties: owned.map {
+                OwnedPropertyState(propertyID: $0.id,
+                                   purchasedAt: $0.purchasedAt,
+                                   totalEarned: $0.totalEarned)
+            }
+        )
+        PersistenceService.shared.save(state)
     }
 }

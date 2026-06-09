@@ -26,6 +26,19 @@
 	<true/>
 	<key>MBXAccessToken</key>
 	<string>$(MAPBOX_TOKEN)</string>
+	<key>GIDClientID</key>
+	<string>$(GOOGLE_CLIENT_ID)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>$(GOOGLE_REVERSED_CLIENT_ID)</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Konumunuzu haritada göstermek için kullanılır.</string>
 	<key>NSUserTrackingUsageDescription</key>

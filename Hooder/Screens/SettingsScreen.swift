@@ -2,10 +2,12 @@ import SwiftUI
 
 struct SettingsScreen: View {
     @EnvironmentObject var game: GameStore
+    @EnvironmentObject var auth: AuthService
     @State private var nameInput = ""
     @State private var editingName = false
     @State private var showAddCash = false
     @State private var showResetConfirm = false
+    @State private var showSignOutConfirm = false
 
     private var appVersion: String {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -64,6 +66,35 @@ struct SettingsScreen: View {
                     Text("İSTATİSTİKLER").font(.label_).foregroundColor(C.textMuted)
                 }
                 .listRowBackground(C.bgCard)
+
+                // Account section
+                Section {
+                    HStack {
+                        Image(systemName: auth.userID.hasPrefix("apple_") ? "applelogo" : "globe")
+                            .foregroundColor(C.primary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(auth.displayName)
+                                .foregroundColor(C.text)
+                                .font(.bodyBold)
+                            Text(auth.email.isEmpty ? (auth.userID.hasPrefix("apple_") ? "Apple Hesabı" : "Google Hesabı") : auth.email)
+                                .foregroundColor(C.textMuted)
+                                .font(.caption_)
+                        }
+                        Spacer()
+                        Image(systemName: "checkmark.seal.fill")
+                            .foregroundColor(C.green)
+                    }
+                    .listRowBackground(C.bgCard)
+
+                    Button(role: .destructive) {
+                        showSignOutConfirm = true
+                    } label: {
+                        Label("Çıkış Yap", systemImage: "rectangle.portrait.and.arrow.right")
+                    }
+                    .listRowBackground(C.bgCard)
+                } header: {
+                    Text("HESAP").font(.label_).foregroundColor(C.textMuted)
+                }
 
                 // Cheats section
                 Section {
@@ -126,6 +157,15 @@ struct SettingsScreen: View {
         } message: {
             Text("Tüm mülkler ve para sıfırlanır. Bu işlem geri alınamaz.")
         }
+        .confirmationDialog("Çıkış Yap", isPresented: $showSignOutConfirm, titleVisibility: .visible) {
+            Button("Çıkış Yap", role: .destructive) {
+                game.reset()
+                auth.signOut()
+            }
+            Button("İptal", role: .cancel) {}
+        } message: {
+            Text("Çıkış yaparsan verilerini kaybetmezsin — tekrar giriş yapınca geri yüklenir.")
+        }
     }
 
     @ViewBuilder
@@ -143,13 +183,5 @@ struct SettingsScreen: View {
         editingName = false
     }
 
-    private func resetGame() {
-        game.cash        = 50_000
-        game.netWorth    = 50_000
-        game.owned       = []
-        game.dailyIncome = 0
-        game.level       = 1
-        game.xp          = 0
-        game.lastCollect = Date()
-    }
+    private func resetGame() { game.reset() }
 }
