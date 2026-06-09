@@ -60,23 +60,55 @@ resp = get("/v1/bundleIds?filter[identifier]=app.realvirtuality.landlord&limit=1
 bundle_res_id = resp["data"][0]["id"]
 print(f"Bundle ID resource: {bundle_res_id}")
 
-# ── 2. Enable capabilities ──────────────────────────────────────────────────
+# ── 2. List current capabilities ───────────────────────────────────────────
+print("Current capabilities:")
+try:
+    cap_resp = get(f"/v1/bundleIds/{bundle_res_id}/bundleIdCapabilities")
+    existing_types = {c["attributes"]["capabilityType"]: c["id"] for c in cap_resp.get("data", [])}
+    for ct in existing_types:
+        print(f"  {ct}")
+except Exception as e:
+    print(f"  Error listing: {e}")
+    existing_types = {}
+
+# ── 3. Enable / update capabilities ─────────────────────────────────────────
+def enable_or_update(cap_type, settings):
+    if cap_type in existing_types:
+        # PATCH existing capability
+        cap_id = existing_types[cap_type]
+        req = urllib.request.Request(
+            f"{BASE}/v1/bundleIdCapabilities/{cap_id}",
+            data=json.dumps({"data": {
+                "type": "bundleIdCapabilities",
+                "id": cap_id,
+                "attributes": {"capabilityType": cap_type, "settings": settings},
+            }}).encode(),
+            headers={**HEADERS, "Content-Type": "application/json"},
+            method="PATCH"
+        )
+        try:
+            urllib.request.urlopen(req)
+            print(f"  Updated {cap_type}")
+        except urllib.error.HTTPError as e:
+            print(f"  Patch {cap_type} {e.code}")
+    else:
+        result = post("/v1/bundleIdCapabilities", {"data": {
+            "type": "bundleIdCapabilities",
+            "attributes": {"capabilityType": cap_type, "settings": settings},
+            "relationships": {"bundleId": {"data": {"type": "bundleIds", "id": bundle_res_id}}}
+        }})
+        if result:
+            print(f"  Enabled {cap_type}")
+
 print("Enabling Sign in with Apple...")
-post("/v1/bundleIdCapabilities", {"data": {
-    "type": "bundleIdCapabilities",
-    "attributes": {"capabilityType": "APPLE_ID_AUTH", "settings": []},
-    "relationships": {"bundleId": {"data": {"type": "bundleIds", "id": bundle_res_id}}}
-}})
+enable_or_update("APPLE_ID_AUTH", [])
 
 print("Enabling iCloud...")
-post("/v1/bundleIdCapabilities", {"data": {
-    "type": "bundleIdCapabilities",
-    "attributes": {
-        "capabilityType": "ICLOUD",
-        "settings": [{"key": "ICLOUD_VERSION", "options": [{"key": "XCODE_6"}]}]
-    },
-    "relationships": {"bundleId": {"data": {"type": "bundleIds", "id": bundle_res_id}}}
-}})
+enable_or_update("ICLOUD", [{"key": "ICLOUD_VERSION", "options": [{"key": "XCODE_6"}]}])
+
+# ASC'ye capability değişikliklerini yansıtması için bekle
+print("Waiting for ASC to propagate capability changes...")
+time.sleep(5)
 
 # ── 3. Delete stale App Store profiles ────────────────────────────────────
 print("Deleting stale App Store profiles...")
