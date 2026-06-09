@@ -12,9 +12,9 @@ struct HooderApp: App {
     init() {
         MapboxOptions.accessToken = Bundle.main.infoDictionary?["MBXAccessToken"] as? String ?? ""
 
-        // Configure Google Sign-In if client ID is set
+        // Configure Google Sign-In — only when a real OAuth client ID is present
         if let clientID = Bundle.main.infoDictionary?["GIDClientID"] as? String,
-           !clientID.isEmpty, clientID != "PLACEHOLDER" {
+           clientID.hasSuffix(".apps.googleusercontent.com") {
             GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientID)
         }
     }
@@ -45,6 +45,9 @@ struct HooderApp: App {
                         }
                     }
             }
+        }
+        .onOpenURL { url in
+            GIDSignIn.sharedInstance.handle(url)
         }
     }
 }

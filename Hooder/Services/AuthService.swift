@@ -69,21 +69,33 @@ final class AuthService: ObservableObject {
     // MARK: - Google Sign-In
 
     func signInWithGoogle() {
-        guard GIDSignIn.sharedInstance.configuration != nil else {
-            authError = "Google giriş yapılandırılmamış."
-            return
-        }
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let rootVC = windowScene.windows.first(where: { $0.isKeyWindow })?.rootViewController else {
-            authError = "Pencere bulunamadı."
+        // Verify a real Google client ID is configured (must end with .apps.googleusercontent.com)
+        guard let cfg = GIDSignIn.sharedInstance.configuration,
+              cfg.clientID.hasSuffix(".apps.googleusercontent.com") else {
+            authError = "Google istemci kimliği yapılandırılmamış."
             return
         }
 
-        GIDSignIn.sharedInstance.signIn(withPresenting: rootVC) { [weak self] result, error in
+        // Find the topmost visible view controller
+        guard let windowScene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.activationState == .foregroundActive }),
+              let rootVC = windowScene.keyWindow?.rootViewController else {
+            authError = "Pencere bulunamadı."
+            return
+        }
+        var topVC = rootVC
+        while let presented = topVC.presentedViewController { topVC = presented }
+
+        GIDSignIn.sharedInstance.signIn(withPresenting: topVC) { [weak self] result, error in
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 if let error {
-                    self.authError = error.localizedDescription
+                    let ns = error as NSError
+                    // Ignore user cancellation (GIDSignInError.canceled = -5)
+                    if ns.domain != "com.google.GIDSignIn" || ns.code != -5 {
+                        self.authError = error.localizedDescription
+                    }
                     return
                 }
                 guard let user = result?.user else { return }
