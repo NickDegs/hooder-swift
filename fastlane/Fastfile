@@ -22,19 +22,7 @@ platform :ios do
   lane :release do
     api_key = asc_key
 
-    # Sign in with Apple + iCloud KV capability'lerini etkinleştir (idempotent)
-    produce(
-      api_key:        api_key,
-      app_identifier: "app.realvirtuality.landlord",
-      app_name:       "Hooder",
-      skip_itc:       true,
-      enable_services: {
-        sign_in_with_apple: "on",
-        icloud:             "on",
-      }
-    )
-
-    # Capability değişikliklerini içeren profili zorla yeniden oluştur
+    # Capabilities CI adımında etkinleştirildi; güncel profili zorla indir
     get_provisioning_profile(
       app_identifier: "app.realvirtuality.landlord",
       api_key:        api_key,

@@ -73,6 +73,15 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -s -k "" "$KEYCHAIN"
           rm /tmp/dist.p12
 
+      - name: Enable App ID capabilities
+        env:
+          ASC_KEY_ID:    ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY:   ${{ secrets.ASC_API_KEY }}
+        run: |
+          pip3 install pyjwt cryptography -q
+          python3 scripts/enable_capabilities.py
+
       - name: Build & upload
         env:
           ASC_KEY_ID:                ${{ secrets.ASC_KEY_ID }}
