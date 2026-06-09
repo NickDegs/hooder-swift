@@ -68,3 +68,21 @@ post("/v1/bundleIdCapabilities", {"data": {
 }})
 
 print("Done.")
+
+# Delete stale App Store profiles so fastlane creates a fresh one with current capabilities
+print("Deleting stale App Store profiles...")
+try:
+    resp = get(f"/v1/profiles?filter[bundleId]={bundle_id}&filter[profileType]=IOS_APP_STORE&limit=10")
+    for p in resp.get("data", []):
+        pid = p["id"]
+        pname = p["attributes"].get("name", pid)
+        req = urllib.request.Request(f"{BASE}/v1/profiles/{pid}", headers=HEADERS, method="DELETE")
+        try:
+            urllib.request.urlopen(req)
+            print(f"  Deleted: {pname}")
+        except urllib.error.HTTPError as e:
+            print(f"  Skip {pname}: {e.code}")
+except Exception as e:
+    print(f"  Profile list error (non-fatal): {e}")
+
+print("Capability setup complete.")
