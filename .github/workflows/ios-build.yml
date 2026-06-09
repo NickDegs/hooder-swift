@@ -79,8 +79,9 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_API_KEY:   ${{ secrets.ASC_API_KEY }}
         run: |
-          pip3 install pyjwt cryptography -q
-          python3 scripts/enable_capabilities.py
+          python3 -m venv /tmp/cap-venv
+          /tmp/cap-venv/bin/pip install pyjwt cryptography -q
+          /tmp/cap-venv/bin/python3 scripts/enable_capabilities.py
 
       - name: Build & upload
         env:
