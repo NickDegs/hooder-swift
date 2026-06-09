@@ -42,7 +42,8 @@ def post(path, data):
             return json.loads(r.read())
     except urllib.error.HTTPError as e:
         if e.code == 409:
-            print("  Already enabled (409)")
+            err_body = e.read().decode("utf-8", errors="replace")
+            print(f"  409 response: {err_body}")
             return None
         raise
 
@@ -61,36 +62,42 @@ bundle_res_id = resp["data"][0]["id"]
 print(f"Bundle ID resource: {bundle_res_id}")
 
 # ── 2. List current capabilities ───────────────────────────────────────────
-print("Current capabilities:")
+print("Current capabilities (full):")
 try:
-    cap_resp = get(f"/v1/bundleIds/{bundle_res_id}/bundleIdCapabilities")
-    existing_types = {c["attributes"]["capabilityType"]: c["id"] for c in cap_resp.get("data", [])}
-    for ct in existing_types:
-        print(f"  {ct}")
+    cap_resp = get(f"/v1/bundleIds/{bundle_res_id}/bundleIdCapabilities?limit=200")
+    print(f"  total: {len(cap_resp.get('data', []))}")
+    existing_types = {}
+    for c in cap_resp.get("data", []):
+        ct = c["attributes"]["capabilityType"]
+        existing_types[ct] = c["id"]
+        print(f"  {ct} → {c['id']}")
 except Exception as e:
     print(f"  Error listing: {e}")
     existing_types = {}
 
 # ── 3. Enable / update capabilities ─────────────────────────────────────────
+def patch_capability(cap_id, cap_type, settings):
+    req = urllib.request.Request(
+        f"{BASE}/v1/bundleIdCapabilities/{cap_id}",
+        data=json.dumps({"data": {
+            "type": "bundleIdCapabilities",
+            "id": cap_id,
+            "attributes": {"capabilityType": cap_type, "settings": settings},
+        }}).encode(),
+        headers={**HEADERS, "Content-Type": "application/json"},
+        method="PATCH"
+    )
+    try:
+        urllib.request.urlopen(req)
+        print(f"  PATCHed {cap_type}")
+        return True
+    except urllib.error.HTTPError as e:
+        print(f"  Patch {cap_type} {e.code}: {e.read().decode('utf-8', errors='replace')}")
+        return False
+
 def enable_or_update(cap_type, settings):
     if cap_type in existing_types:
-        # PATCH existing capability
-        cap_id = existing_types[cap_type]
-        req = urllib.request.Request(
-            f"{BASE}/v1/bundleIdCapabilities/{cap_id}",
-            data=json.dumps({"data": {
-                "type": "bundleIdCapabilities",
-                "id": cap_id,
-                "attributes": {"capabilityType": cap_type, "settings": settings},
-            }}).encode(),
-            headers={**HEADERS, "Content-Type": "application/json"},
-            method="PATCH"
-        )
-        try:
-            urllib.request.urlopen(req)
-            print(f"  Updated {cap_type}")
-        except urllib.error.HTTPError as e:
-            print(f"  Patch {cap_type} {e.code}")
+        patch_capability(existing_types[cap_type], cap_type, settings)
     else:
         result = post("/v1/bundleIdCapabilities", {"data": {
             "type": "bundleIdCapabilities",
@@ -99,6 +106,20 @@ def enable_or_update(cap_type, settings):
         }})
         if result:
             print(f"  Enabled {cap_type}")
+        else:
+            # 409: exists but not in list — try to find and PATCH via global endpoint
+            print(f"  {cap_type} conflict — searching global endpoint...")
+            try:
+                search = get(f"/v1/bundleIdCapabilities?filter[bundleId]={bundle_res_id}&limit=200")
+                found = [c for c in search.get("data", []) if c["attributes"]["capabilityType"] == cap_type]
+                if found:
+                    cap_id = found[0]["id"]
+                    print(f"  Found {cap_type} via global search → {cap_id}")
+                    patch_capability(cap_id, cap_type, settings)
+                else:
+                    print(f"  {cap_type} not found via global search either")
+            except Exception as ex:
+                print(f"  Global search error: {ex}")
 
 print("Enabling Sign in with Apple...")
 enable_or_update("APPLE_ID_AUTH", [])
