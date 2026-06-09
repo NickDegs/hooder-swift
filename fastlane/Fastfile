@@ -46,6 +46,9 @@ platform :ios do
       profile_uuid  = Plist.parse_xml(plist_content)["UUID"]
     end
 
+    # Profili Xcode'un arayacağı yere kur
+    install_provisioning_profile(path: profile_file)
+
     # Xcode projesini manuel signing için ayarla
     update_code_signing_settings(
       use_automatic_signing: false,
