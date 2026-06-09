@@ -22,13 +22,29 @@ platform :ios do
   lane :release do
     api_key = asc_key
 
-    # Capabilities CI adımında etkinleştirildi; eski profil silindi, yenisini oluştur
-    get_provisioning_profile(
-      app_identifier: "app.realvirtuality.landlord",
-      api_key:        api_key,
-      output_path:    "/tmp/fl-certs",
-      force:          false,
-    )
+    # CI adımı profili oluşturdu: /tmp/fl-certs/*.mobileprovision
+    # Yoksa get_provisioning_profile ile indir
+    profile_file = Dir["/tmp/fl-certs/*.mobileprovision"].first
+    if profile_file.nil?
+      get_provisioning_profile(
+        app_identifier: "app.realvirtuality.landlord",
+        api_key:        api_key,
+        output_path:    "/tmp/fl-certs",
+        force:          true,
+      )
+      profile_file = Dir["/tmp/fl-certs/*.mobileprovision"].first
+    end
+
+    # Profil UUID'sini oku
+    profile_uuid = ENV["PROFILE_UUID"]
+    if profile_uuid.nil? || profile_uuid.empty?
+      profile_uuid = lane_context[SharedValues::SIGH_UUID]
+    end
+    if profile_uuid.nil? || profile_uuid.empty?
+      require "plist"
+      plist_content = `security cms -D -i "#{profile_file}" 2>/dev/null`
+      profile_uuid  = Plist.parse_xml(plist_content)["UUID"]
+    end
 
     # Xcode projesini manuel signing için ayarla
     update_code_signing_settings(
@@ -40,12 +56,10 @@ platform :ios do
 
     update_project_provisioning(
       xcodeproj:           "Hooder.xcodeproj",
-      profile:             Dir["/tmp/fl-certs/*.mobileprovision"].first,
+      profile:             profile_file,
       target_filter:       "Hooder",
       build_configuration: "Release",
     )
-
-    profile_uuid = lane_context[SharedValues::SIGH_UUID]
 
     build_app(
       project:           "Hooder.xcodeproj",
