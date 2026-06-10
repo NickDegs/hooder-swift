@@ -69,9 +69,10 @@ struct RankingsScreen: View {
                 }
                 .padding(.top, Sp.lg)
             }
-            .background(C.bg.ignoresSafeArea())
+            .background(Color.clear.ignoresSafeArea())
             .navigationTitle("Sıralama")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(.hidden, for: .navigationBar)
         }
     }
 

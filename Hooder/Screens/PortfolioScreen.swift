@@ -90,9 +90,10 @@ struct PortfolioScreen: View {
                 }
                 .padding(.top, Sp.lg)
             }
-            .background(C.bg.ignoresSafeArea())
+            .background(Color.clear.ignoresSafeArea())
             .navigationTitle("Portföyüm")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .overlay(alignment: .bottom) {
                 if showCollectToast {
                     Label("+\(formatPrice(collectedAmount)) toplandı!", systemImage: "sparkles")

@@ -161,9 +161,10 @@ struct SettingsScreen: View {
                 .padding(.horizontal, Sp.lg)
                 .padding(.top, Sp.lg)
             }
-            .background(C.bg.ignoresSafeArea())
+            .background(Color.clear.ignoresSafeArea())
             .navigationTitle("Ayarlar")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(.hidden, for: .navigationBar)
         }
         .confirmationDialog("Nakit Ekle", isPresented: $showAddCash) {
             Button("$100,000 Ekle")    { game.addCash(100_000) }

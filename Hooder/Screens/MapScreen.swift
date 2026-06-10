@@ -56,12 +56,10 @@ struct MapboxView: UIViewRepresentable {
             ) { [weak self] note in
                 guard let city = note.userInfo?["city"] as? City,
                       let mv = self?.mapView else { return }
-                let cam = CameraOptions(
+                mv.camera.fly(to: CameraOptions(
                     center: CLLocationCoordinate2D(latitude: city.lat, longitude: city.lng),
-                    zoom: city.zoom,
-                    pitch: 50
-                )
-                mv.camera.fly(to: cam, duration: 1.2)
+                    zoom: city.zoom, pitch: 50
+                ), duration: 1.2)
             }
         }
 
@@ -111,184 +109,22 @@ struct MapboxView: UIViewRepresentable {
     }
 }
 
-// MARK: - MapScreen
-
-struct MapScreen: View {
-    @EnvironmentObject var game: GameStore
-
-    @State private var selectedProperty: Property?
-    @State private var selectedCity: City? = allCities.first
-    @State private var showCityPicker   = false
-    @State private var showBuyConfirm   = false
-    @State private var pendingBuy: Property?
-    @State private var toastMsg: String?
-
-    var body: some View {
-        ZStack(alignment: .bottom) {
-            MapboxView(properties: allProperties, selectedProperty: $selectedProperty)
-                .ignoresSafeArea()
-
-            // Top HUD
-            VStack(spacing: 0) {
-                HStack {
-                    cashBadge
-                    Spacer()
-                    cityPickerButton
-                }
-                .padding(.horizontal, Sp.lg)
-                .padding(.top, Sp.lg)
-
-                if showCityPicker {
-                    cityChips
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                }
-
-                Spacer()
-            }
-
-            // Property detail sheet
-            if let prop = selectedProperty {
-                PropertyDetailPanel(
-                    property: prop,
-                    onClose: { withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { selectedProperty = nil } },
-                    onBuy: {
-                        pendingBuy = prop
-                        showBuyConfirm = true
-                    }
-                )
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .animation(.spring(response: 0.35, dampingFraction: 0.8), value: selectedProperty?.id)
-            }
-
-            // Toast
-            if let msg = toastMsg {
-                Text(msg)
-                    .font(.bodyBold)
-                    .foregroundStyle(C.text)
-                    .padding(.horizontal, Sp.lg)
-                    .padding(.vertical, Sp.md)
-                    .background(.ultraThinMaterial, in: Capsule())
-                    .overlay(Capsule().stroke(C.border, lineWidth: 0.5))
-                    .padding(.bottom, Sp.x4)
-                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
-            }
-        }
-        .confirmationDialog(
-            pendingBuy.map { "Satın al: \($0.name)" } ?? "",
-            isPresented: $showBuyConfirm,
-            titleVisibility: .visible
-        ) {
-            if let prop = pendingBuy {
-                Button("Satın Al — \(formatPrice(prop.price))") { doBuy(prop) }
-                Button("İptal", role: .cancel) {}
-            }
-        } message: {
-            if let prop = pendingBuy {
-                Text("Mevcut bakiye: \(formatPrice(game.cash))")
-            }
-        }
-    }
-
-    // MARK: Subviews
-
-    private var cashBadge: some View {
-        HStack(spacing: Sp.xs) {
-            Image(systemName: "dollarsign.circle.fill")
-                .foregroundStyle(C.gold)
-            Text(formatPrice(game.cash))
-                .font(.bodyBold)
-                .foregroundStyle(C.text)
-        }
-        .padding(.horizontal, Sp.md)
-        .padding(.vertical, Sp.sm)
-        .background(.ultraThinMaterial, in: Capsule())
-        .overlay(Capsule().stroke(C.specular, lineWidth: 0.5))
-    }
-
-    private var cityPickerButton: some View {
-        Button { withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { showCityPicker.toggle() } } label: {
-            HStack(spacing: Sp.xs) {
-                Text(selectedCity?.flag ?? "🌍")
-                Text(selectedCity?.name ?? "Şehir")
-                    .font(.bodyBold)
-                    .foregroundStyle(C.text)
-                Image(systemName: showCityPicker ? "chevron.up" : "chevron.down")
-                    .font(.caption_)
-                    .foregroundStyle(C.textSub)
-            }
-            .padding(.horizontal, Sp.md)
-            .padding(.vertical, Sp.sm)
-            .background(.ultraThinMaterial, in: Capsule())
-            .overlay(Capsule().stroke(C.specular, lineWidth: 0.5))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var cityChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Sp.sm) {
-                ForEach(allCities) { city in
-                    Button {
-                        selectedCity = city
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { showCityPicker = false }
-                        NotificationCenter.default.post(
-                            name: .flyToCity, object: nil, userInfo: ["city": city]
-                        )
-                    } label: {
-                        HStack(spacing: 4) {
-                            Text(city.flag)
-                            Text(city.name)
-                                .font(.bodyBold)
-                                .foregroundStyle(selectedCity?.id == city.id ? C.primary : C.text)
-                        }
-                        .padding(.horizontal, Sp.md)
-                        .padding(.vertical, Sp.sm)
-                        .background(selectedCity?.id == city.id ? C.primary.opacity(0.2) : Color.clear)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Capsule())
-                        .overlay(Capsule().stroke(selectedCity?.id == city.id ? C.primary : C.border, lineWidth: 0.5))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, Sp.lg)
-            .padding(.vertical, Sp.sm)
-        }
-    }
-
-    // MARK: Helpers
-
-    private func doBuy(_ prop: Property) {
-        let ok = game.buy(prop)
-        showToast(ok ? "\(prop.name) satın alındı!" : "Yetersiz bakiye!")
-        if ok { withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { selectedProperty = nil } }
-    }
-
-    private func showToast(_ msg: String) {
-        withAnimation { toastMsg = msg }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-            withAnimation { toastMsg = nil }
-        }
-    }
-}
-
 // MARK: - Property Detail Panel
 
 struct PropertyDetailPanel: View {
     let property: Property
     var onClose: () -> Void
-    var onBuy: () -> Void
+    var onBuy:   () -> Void
     @EnvironmentObject var game: GameStore
 
-    var accent: Color  { Color(hex: property.accentHex) }
-    var owned: Bool    { game.isOwned(property.id) }
+    var accent: Color   { Color(hex: property.accentHex) }
+    var owned: Bool     { game.isOwned(property.id) }
     var canAfford: Bool { game.cash >= property.price }
 
     var body: some View {
         VStack(spacing: 0) {
-            // Drag handle
             Capsule()
-                .fill(C.border)
+                .fill(Color.white.opacity(0.25))
                 .frame(width: 36, height: 4)
                 .padding(.top, Sp.md)
 
@@ -298,15 +134,11 @@ struct PropertyDetailPanel: View {
                         HStack(spacing: 4) {
                             Text(property.category.emoji)
                             Text(property.category.label.uppercased())
-                                .font(.label_)
-                                .foregroundStyle(accent)
+                                .font(.label_).foregroundStyle(accent)
                         }
-                        Text(property.name)
-                            .font(.h3)
-                            .foregroundStyle(C.text)
+                        Text(property.name).font(.h3).foregroundStyle(C.text)
                         Text("\(property.neighborhood) · \(property.city)")
-                            .font(.caption_)
-                            .foregroundStyle(C.textSub)
+                            .font(.caption_).foregroundStyle(C.textSub)
                     }
                     Spacer()
                     Button(action: onClose) {
@@ -317,21 +149,18 @@ struct PropertyDetailPanel: View {
                 }
 
                 Text(property.description)
-                    .font(.body_)
-                    .foregroundStyle(C.textSub)
-                    .lineLimit(3)
+                    .font(.body_).foregroundStyle(C.textSub).lineLimit(3)
 
                 HStack(spacing: Sp.sm) {
-                    StatBadge(label: "Fiyat",   value: formatPrice(property.price),                   accent: C.text)
-                    StatBadge(label: "Günlük",  value: formatIncome(property.incomePerDay),            accent: C.green)
-                    StatBadge(label: "ROI/Yıl", value: String(format: "%.1f%%", property.roiPercent), accent: C.gold)
+                    StatBadge(label: "Fiyat",   value: formatPrice(property.price),                    accent: C.text)
+                    StatBadge(label: "Günlük",  value: formatIncome(property.incomePerDay),             accent: C.green)
+                    StatBadge(label: "ROI/Yıl", value: String(format: "%.1f%%", property.roiPercent),  accent: C.gold)
                     StatBadge(label: "Prestij", value: String(repeating: "★", count: property.prestige), accent: C.purple)
                 }
 
                 if owned {
                     Label("Bu mülk portföyünüzde", systemImage: "checkmark.seal.fill")
-                        .font(.bodyBold)
-                        .foregroundStyle(C.green)
+                        .font(.bodyBold).foregroundStyle(C.green)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Sp.md)
                         .background(C.green.opacity(0.12), in: RoundedRectangle(cornerRadius: R.md, style: .continuous))
@@ -346,7 +175,7 @@ struct PropertyDetailPanel: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Sp.lg)
                         .background(canAfford ? C.primary : Color.clear)
-                        .background(canAfford ? Color.clear : .ultraThinMaterial)
+                        .background(.ultraThinMaterial)
                         .clipShape(RoundedRectangle(cornerRadius: R.lg, style: .continuous))
                     }
                     .disabled(!canAfford)
@@ -362,8 +191,7 @@ struct PropertyDetailPanel: View {
         }
         .clipShape(RoundedRectangle(cornerRadius: R.xl, style: .continuous))
         .padding(.horizontal, Sp.md)
-        .padding(.bottom, Sp.lg)
-        .shadow(color: .black.opacity(0.4), radius: 24, y: -4)
+        .shadow(color: .black.opacity(0.45), radius: 24, y: -4)
     }
 }
 

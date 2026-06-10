@@ -129,7 +129,7 @@ struct MarketScreen: View {
                 }
                 .padding(.horizontal, Sp.lg)
                 .padding(.bottom, Sp.sm)
-                .background(C.bg)
+                .background(Color.clear)
 
                 Divider().background(C.border)
 
@@ -144,11 +144,12 @@ struct MarketScreen: View {
                     }
                     .padding(.top, Sp.md)
                 }
-                .background(C.bg)
+                .background(Color.clear)
             }
-            .background(C.bg.ignoresSafeArea())
+            .background(Color.clear.ignoresSafeArea())
             .navigationTitle("Piyasa")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .overlay(alignment: .bottom) {
                 if let msg = toastMsg {
                     Text(msg)
