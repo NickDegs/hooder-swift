@@ -6,19 +6,25 @@ struct StatBadge: View {
     var accent: Color = C.primary
 
     var body: some View {
-        VStack(spacing: 3) {
+        VStack(spacing: 4) {
             Text(value)
                 .font(.stat)
-                .foregroundColor(accent)
+                .foregroundStyle(accent)
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
             Text(label.uppercased())
                 .font(.label_)
-                .foregroundColor(C.textMuted)
+                .foregroundStyle(C.textMuted)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, Sp.md)
-        .background(C.bgElevated)
-        .clipShape(RoundedRectangle(cornerRadius: R.md))
+        .background {
+            RoundedRectangle(cornerRadius: R.md, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    RoundedRectangle(cornerRadius: R.md, style: .continuous)
+                        .stroke(C.border, lineWidth: 0.5)
+                }
+        }
     }
 }

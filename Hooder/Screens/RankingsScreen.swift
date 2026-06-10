@@ -55,6 +55,7 @@ struct RankingsScreen: View {
                 VStack(spacing: Sp.md) {
                     // Player rank card
                     playerRankCard
+                        .padding(.horizontal, Sp.lg)
 
                     // Leaderboard
                     VStack(spacing: Sp.sm) {
@@ -64,7 +65,7 @@ struct RankingsScreen: View {
                     }
                     .padding(.horizontal, Sp.lg)
 
-                    Spacer(minLength: 100)
+                    Spacer(minLength: Sp.x4)
                 }
                 .padding(.top, Sp.lg)
             }
@@ -80,43 +81,41 @@ struct RankingsScreen: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Sıralaman")
                         .font(.label_)
-                        .foregroundColor(C.textMuted)
+                        .foregroundStyle(C.textMuted)
                     Text("#\(playerRank)")
                         .font(.display)
-                        .foregroundColor(C.primary)
+                        .foregroundStyle(C.primary)
                     Text("/ \(leaders.count) oyuncu")
                         .font(.caption_)
-                        .foregroundColor(C.textSub)
+                        .foregroundStyle(C.textSub)
                 }
 
                 Spacer()
 
-                VStack(alignment: .trailing, spacing: Sp.sm) {
+                VStack(spacing: Sp.sm) {
                     StatBadge(label: "Net Değer", value: formatPrice(game.netWorth), accent: C.gold)
-                        .frame(maxWidth: 120)
+                        .frame(maxWidth: 130)
                     StatBadge(label: "Mülk", value: "\(game.owned.count)", accent: C.green)
-                        .frame(maxWidth: 120)
+                        .frame(maxWidth: 130)
                 }
             }
         }
-        .padding(.horizontal, Sp.lg)
     }
 
     @ViewBuilder
     private func rankRow(rank: Int, entry: LeaderEntry) -> some View {
-        let isTop3 = rank <= 3
-        let medalsIcon = ["🥇", "🥈", "🥉"]
+        let medals = ["🥇", "🥈", "🥉"]
 
         HStack(spacing: Sp.md) {
-            // Rank
+            // Rank badge
             ZStack {
                 if rank <= 3 {
-                    Text(medalsIcon[rank - 1])
+                    Text(medals[rank - 1])
                         .font(.system(size: 22))
                 } else {
                     Text("\(rank)")
                         .font(.bodyBold)
-                        .foregroundColor(entry.isPlayer ? C.primary : C.textSub)
+                        .foregroundStyle(entry.isPlayer ? C.primary : C.textSub)
                         .frame(width: 28)
                 }
             }
@@ -127,25 +126,28 @@ struct RankingsScreen: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.name)
                     .font(entry.isPlayer ? .bodyBold : .body_)
-                    .foregroundColor(entry.isPlayer ? C.primary : C.text)
+                    .foregroundStyle(entry.isPlayer ? C.primary : C.text)
                 Text("\(entry.ownedCount) mülk")
                     .font(.caption_)
-                    .foregroundColor(C.textMuted)
+                    .foregroundStyle(C.textMuted)
             }
 
             Spacer()
 
             Text(formatPrice(entry.netWorth))
                 .font(.bodyBold)
-                .foregroundColor(isTop3 ? C.gold : (entry.isPlayer ? C.primary : C.textSub))
+                .foregroundStyle(rank <= 3 ? C.gold : (entry.isPlayer ? C.primary : C.textSub))
         }
         .padding(.horizontal, Sp.md)
-        .padding(.vertical, Sp.sm)
-        .background(entry.isPlayer ? C.primary.opacity(0.08) : C.bgCard)
-        .overlay(
-            RoundedRectangle(cornerRadius: R.md)
-                .stroke(entry.isPlayer ? C.primary.opacity(0.3) : C.border, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: R.md))
+        .padding(.vertical, Sp.sm + 2)
+        .background {
+            RoundedRectangle(cornerRadius: R.md, style: .continuous)
+                .fill(entry.isPlayer ? C.primary.opacity(0.08) : Color.clear)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: R.md, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: R.md, style: .continuous)
+                        .stroke(entry.isPlayer ? C.primary.opacity(0.3) : C.border, lineWidth: 0.5)
+                }
+        }
     }
 }

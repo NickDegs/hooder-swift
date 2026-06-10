@@ -19,7 +19,6 @@ struct MapboxView: UIViewRepresentable {
         let mapView = MapView(frame: .zero, mapInitOptions: opts)
         mapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 
-        // Hide ornaments (attribution must stay per ToS — keep it)
         var ornOpts = mapView.ornaments.options
         ornOpts.scaleBar.visibility = .hidden
         ornOpts.compass.visibility  = .adaptive
@@ -27,13 +26,10 @@ struct MapboxView: UIViewRepresentable {
 
         context.coordinator.mapView = mapView
 
-        // Add annotations once style is loaded
         let token = mapView.mapboxMap.onStyleLoaded.observeNext { [weak coordinator = context.coordinator] _ in
             coordinator?.addAnnotations()
         }
         context.coordinator.styleToken = token
-
-        // City fly notification
         context.coordinator.setupCityObserver()
 
         return mapView
@@ -89,7 +85,9 @@ struct MapboxView: UIViewRepresentable {
                   let id   = ann.userInfo?["id"] as? String,
                   let prop = parent.properties.first(where: { $0.id == id }) else { return }
             DispatchQueue.main.async {
-                withAnimation { self.parent.selectedProperty = prop }
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    self.parent.selectedProperty = prop
+                }
                 self.mapView?.camera.fly(to: CameraOptions(
                     center: prop.coordinate, zoom: 15, pitch: 50
                 ), duration: 0.8)
@@ -152,7 +150,7 @@ struct MapScreen: View {
             if let prop = selectedProperty {
                 PropertyDetailPanel(
                     property: prop,
-                    onClose: { withAnimation { selectedProperty = nil } },
+                    onClose: { withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { selectedProperty = nil } },
                     onBuy: {
                         pendingBuy = prop
                         showBuyConfirm = true
@@ -166,13 +164,13 @@ struct MapScreen: View {
             if let msg = toastMsg {
                 Text(msg)
                     .font(.bodyBold)
-                    .foregroundColor(C.text)
+                    .foregroundStyle(C.text)
                     .padding(.horizontal, Sp.lg)
                     .padding(.vertical, Sp.md)
-                    .background(C.bgCard)
-                    .clipShape(Capsule())
-                    .padding(.bottom, 120)
-                    .transition(.opacity)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .overlay(Capsule().stroke(C.border, lineWidth: 0.5))
+                    .padding(.bottom, Sp.x4)
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
             }
         }
         .confirmationDialog(
@@ -195,27 +193,35 @@ struct MapScreen: View {
 
     private var cashBadge: some View {
         HStack(spacing: Sp.xs) {
-            Image(systemName: "dollarsign.circle.fill").foregroundColor(C.gold)
-            Text(formatPrice(game.cash)).font(.bodyBold).foregroundColor(C.text)
+            Image(systemName: "dollarsign.circle.fill")
+                .foregroundStyle(C.gold)
+            Text(formatPrice(game.cash))
+                .font(.bodyBold)
+                .foregroundStyle(C.text)
         }
         .padding(.horizontal, Sp.md)
         .padding(.vertical, Sp.sm)
-        .background(.ultraThinMaterial)
-        .clipShape(Capsule())
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay(Capsule().stroke(C.specular, lineWidth: 0.5))
     }
 
     private var cityPickerButton: some View {
-        Button { withAnimation { showCityPicker.toggle() } } label: {
+        Button { withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { showCityPicker.toggle() } } label: {
             HStack(spacing: Sp.xs) {
                 Text(selectedCity?.flag ?? "🌍")
-                Text(selectedCity?.name ?? "Şehir").font(.bodyBold).foregroundColor(C.text)
-                Image(systemName: "chevron.down").font(.caption_).foregroundColor(C.textSub)
+                Text(selectedCity?.name ?? "Şehir")
+                    .font(.bodyBold)
+                    .foregroundStyle(C.text)
+                Image(systemName: showCityPicker ? "chevron.up" : "chevron.down")
+                    .font(.caption_)
+                    .foregroundStyle(C.textSub)
             }
             .padding(.horizontal, Sp.md)
             .padding(.vertical, Sp.sm)
-            .background(.ultraThinMaterial)
-            .clipShape(Capsule())
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay(Capsule().stroke(C.specular, lineWidth: 0.5))
         }
+        .buttonStyle(.plain)
     }
 
     private var cityChips: some View {
@@ -224,7 +230,7 @@ struct MapScreen: View {
                 ForEach(allCities) { city in
                     Button {
                         selectedCity = city
-                        withAnimation { showCityPicker = false }
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { showCityPicker = false }
                         NotificationCenter.default.post(
                             name: .flyToCity, object: nil, userInfo: ["city": city]
                         )
@@ -233,22 +239,16 @@ struct MapScreen: View {
                             Text(city.flag)
                             Text(city.name)
                                 .font(.bodyBold)
-                                .foregroundColor(selectedCity?.id == city.id ? C.primary : C.text)
+                                .foregroundStyle(selectedCity?.id == city.id ? C.primary : C.text)
                         }
                         .padding(.horizontal, Sp.md)
                         .padding(.vertical, Sp.sm)
-                        .background(
-                            selectedCity?.id == city.id
-                                ? C.primary.opacity(0.2)
-                                : Color(hex: "#0c1220").opacity(0.9)
-                        )
-                        .overlay(
-                            Capsule().stroke(
-                                selectedCity?.id == city.id ? C.primary : C.border, lineWidth: 1
-                            )
-                        )
+                        .background(selectedCity?.id == city.id ? C.primary.opacity(0.2) : Color.clear)
+                        .background(.ultraThinMaterial)
                         .clipShape(Capsule())
+                        .overlay(Capsule().stroke(selectedCity?.id == city.id ? C.primary : C.border, lineWidth: 0.5))
                     }
+                    .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, Sp.lg)
@@ -261,7 +261,7 @@ struct MapScreen: View {
     private func doBuy(_ prop: Property) {
         let ok = game.buy(prop)
         showToast(ok ? "\(prop.name) satın alındı!" : "Yetersiz bakiye!")
-        if ok { withAnimation { selectedProperty = nil } }
+        if ok { withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { selectedProperty = nil } }
     }
 
     private func showToast(_ msg: String) {
@@ -286,7 +286,11 @@ struct PropertyDetailPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Capsule().fill(C.border).frame(width: 36, height: 4).padding(.top, Sp.md)
+            // Drag handle
+            Capsule()
+                .fill(C.border)
+                .frame(width: 36, height: 4)
+                .padding(.top, Sp.md)
 
             VStack(alignment: .leading, spacing: Sp.md) {
                 HStack(alignment: .top) {
@@ -294,36 +298,43 @@ struct PropertyDetailPanel: View {
                         HStack(spacing: 4) {
                             Text(property.category.emoji)
                             Text(property.category.label.uppercased())
-                                .font(.label_).foregroundColor(accent)
+                                .font(.label_)
+                                .foregroundStyle(accent)
                         }
-                        Text(property.name).font(.h3).foregroundColor(C.text)
+                        Text(property.name)
+                            .font(.h3)
+                            .foregroundStyle(C.text)
                         Text("\(property.neighborhood) · \(property.city)")
-                            .font(.caption_).foregroundColor(C.textSub)
+                            .font(.caption_)
+                            .foregroundStyle(C.textSub)
                     }
                     Spacer()
                     Button(action: onClose) {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 22)).foregroundColor(C.textMuted)
+                            .font(.system(size: 24))
+                            .foregroundStyle(C.textMuted)
                     }
                 }
 
                 Text(property.description)
-                    .font(.body_).foregroundColor(C.textSub).lineLimit(3)
+                    .font(.body_)
+                    .foregroundStyle(C.textSub)
+                    .lineLimit(3)
 
                 HStack(spacing: Sp.sm) {
-                    StatBadge(label: "Fiyat",    value: formatPrice(property.price),                   accent: C.text)
-                    StatBadge(label: "Günlük",   value: formatIncome(property.incomePerDay),            accent: C.green)
-                    StatBadge(label: "ROI/Yıl",  value: String(format: "%.1f%%", property.roiPercent), accent: C.gold)
-                    StatBadge(label: "Prestij",  value: String(repeating: "★", count: property.prestige), accent: C.purple)
+                    StatBadge(label: "Fiyat",   value: formatPrice(property.price),                   accent: C.text)
+                    StatBadge(label: "Günlük",  value: formatIncome(property.incomePerDay),            accent: C.green)
+                    StatBadge(label: "ROI/Yıl", value: String(format: "%.1f%%", property.roiPercent), accent: C.gold)
+                    StatBadge(label: "Prestij", value: String(repeating: "★", count: property.prestige), accent: C.purple)
                 }
 
                 if owned {
                     Label("Bu mülk portföyünüzde", systemImage: "checkmark.seal.fill")
-                        .font(.bodyBold).foregroundColor(C.green)
+                        .font(.bodyBold)
+                        .foregroundStyle(C.green)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Sp.md)
-                        .background(C.green.opacity(0.12))
-                        .clipShape(RoundedRectangle(cornerRadius: R.md))
+                        .background(C.green.opacity(0.12), in: RoundedRectangle(cornerRadius: R.md, style: .continuous))
                 } else {
                     Button(action: onBuy) {
                         HStack {
@@ -331,11 +342,12 @@ struct PropertyDetailPanel: View {
                             Text(canAfford ? "Satın Al — \(formatPrice(property.price))" : "Yetersiz Bakiye")
                                 .font(.btnLg)
                         }
-                        .foregroundColor(canAfford ? .black : C.textMuted)
+                        .foregroundStyle(canAfford ? .black : C.textMuted)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Sp.lg)
-                        .background(canAfford ? C.primary : C.bgElevated)
-                        .clipShape(RoundedRectangle(cornerRadius: R.lg))
+                        .background(canAfford ? C.primary : Color.clear)
+                        .background(canAfford ? Color.clear : .ultraThinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: R.lg, style: .continuous))
                     }
                     .disabled(!canAfford)
                 }
@@ -343,11 +355,15 @@ struct PropertyDetailPanel: View {
             .padding(.horizontal, Sp.lg)
             .padding(.bottom, Sp.lg)
         }
-        .background(C.bgSheet)
-        .clipShape(RoundedRectangle(cornerRadius: R.xl))
+        .background(.ultraThinMaterial)
+        .overlay {
+            RoundedRectangle(cornerRadius: R.xl, style: .continuous)
+                .stroke(C.specular, lineWidth: 0.5)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: R.xl, style: .continuous))
         .padding(.horizontal, Sp.md)
-        .padding(.bottom, 90)
-        .shadow(color: .black.opacity(0.4), radius: 20, y: -4)
+        .padding(.bottom, Sp.lg)
+        .shadow(color: .black.opacity(0.4), radius: 24, y: -4)
     }
 }
 

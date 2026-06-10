@@ -15,7 +15,6 @@ struct MarketScreen: View {
     @State private var selectedCity: String? = nil
     @State private var sortOption: SortOption = .price
     @State private var sortAsc = true
-    @State private var showSortMenu = false
     @State private var buyTarget: Property?
     @State private var showBuyConfirm = false
     @State private var toastMsg: String?
@@ -45,25 +44,34 @@ struct MarketScreen: View {
         return list
     }
 
-    var cities: [String] { Array(Set(allProperties.map { $0.city })).sorted() }
-
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Search + sort header
+                // Search + filters header
                 VStack(spacing: Sp.sm) {
-                    HStack {
+                    // Search bar
+                    HStack(spacing: Sp.sm) {
                         Image(systemName: "magnifyingglass")
-                            .foregroundColor(C.textMuted)
+                            .foregroundStyle(C.textMuted)
+                            .font(.system(size: 14, weight: .medium))
                         TextField("Mülk veya şehir ara...", text: $searchText)
                             .font(.body_)
-                            .foregroundColor(C.text)
+                            .foregroundStyle(C.text)
                             .autocorrectionDisabled()
+                        if !searchText.isEmpty {
+                            Button { searchText = "" } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(C.textMuted)
+                            }
+                        }
                     }
                     .padding(.horizontal, Sp.md)
-                    .padding(.vertical, Sp.sm)
-                    .background(C.bgElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: R.md))
+                    .padding(.vertical, Sp.sm + 2)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: R.md, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: R.md, style: .continuous)
+                            .stroke(C.border, lineWidth: 0.5)
+                    }
 
                     // Category chips
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -75,7 +83,7 @@ struct MarketScreen: View {
                                 }
                             }
                         }
-                        .padding(.horizontal, 1)
+                        .padding(.horizontal, 2)
                     }
 
                     // City chips
@@ -88,14 +96,14 @@ struct MarketScreen: View {
                                 }
                             }
                         }
-                        .padding(.horizontal, 1)
+                        .padding(.horizontal, 2)
                     }
 
-                    // Sort row
+                    // Sort + count row
                     HStack {
                         Text("\(filtered.count) mülk")
                             .font(.caption_)
-                            .foregroundColor(C.textMuted)
+                            .foregroundStyle(C.textMuted)
                         Spacer()
                         Menu {
                             ForEach(SortOption.allCases, id: \.self) { opt in
@@ -115,7 +123,7 @@ struct MarketScreen: View {
                                 Image(systemName: sortAsc ? "arrow.up" : "arrow.down")
                                     .font(.system(size: 10))
                             }
-                            .foregroundColor(C.primary)
+                            .foregroundStyle(C.primary)
                         }
                     }
                 }
@@ -132,7 +140,7 @@ struct MarketScreen: View {
                             marketRow(prop)
                                 .padding(.horizontal, Sp.lg)
                         }
-                        Spacer(minLength: 100)
+                        Spacer(minLength: Sp.x4)
                     }
                     .padding(.top, Sp.md)
                 }
@@ -145,13 +153,13 @@ struct MarketScreen: View {
                 if let msg = toastMsg {
                     Text(msg)
                         .font(.bodyBold)
-                        .foregroundColor(C.text)
+                        .foregroundStyle(C.text)
                         .padding(.horizontal, Sp.lg)
                         .padding(.vertical, Sp.md)
-                        .background(C.bgCard)
-                        .clipShape(Capsule())
-                        .padding(.bottom, 100)
-                        .transition(.opacity)
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .overlay(Capsule().stroke(C.border, lineWidth: 0.5))
+                        .padding(.bottom, Sp.x3)
+                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 }
             }
         }
@@ -185,30 +193,29 @@ struct MarketScreen: View {
                             Text(prop.category.emoji).font(.system(size: 13))
                             Text(prop.category.label.uppercased())
                                 .font(.label_)
-                                .foregroundColor(accent)
+                                .foregroundStyle(accent)
                         }
                         Text(prop.name)
                             .font(.h4)
-                            .foregroundColor(C.text)
+                            .foregroundStyle(C.text)
                         Text("\(prop.neighborhood) · \(prop.city)")
                             .font(.caption_)
-                            .foregroundColor(C.textSub)
+                            .foregroundStyle(C.textSub)
                     }
 
                     Spacer()
 
-                    // Prestige
                     VStack(alignment: .trailing, spacing: 4) {
                         HStack(spacing: 2) {
                             ForEach(1...5, id: \.self) { i in
                                 Image(systemName: i <= prop.prestige ? "star.fill" : "star")
                                     .font(.system(size: 7))
-                                    .foregroundColor(i <= prop.prestige ? C.gold : C.textMuted)
+                                    .foregroundStyle(i <= prop.prestige ? C.gold : C.textMuted)
                             }
                         }
                         Text(String(format: "%.1f%%", prop.roiPercent) + " ROI")
                             .font(.caption_)
-                            .foregroundColor(C.gold)
+                            .foregroundStyle(C.gold)
                     }
                 }
 
@@ -216,10 +223,10 @@ struct MarketScreen: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(formatPrice(prop.price))
                             .font(.bodyBold)
-                            .foregroundColor(C.text)
+                            .foregroundStyle(C.text)
                         Text(formatIncome(prop.incomePerDay))
                             .font(.caption_)
-                            .foregroundColor(C.green)
+                            .foregroundStyle(C.green)
                     }
 
                     Spacer()
@@ -227,11 +234,10 @@ struct MarketScreen: View {
                     if owned {
                         Label("Sahipsiniz", systemImage: "checkmark.seal.fill")
                             .font(.btnSm)
-                            .foregroundColor(C.green)
+                            .foregroundStyle(C.green)
                             .padding(.horizontal, Sp.md)
                             .padding(.vertical, Sp.xs)
-                            .background(C.green.opacity(0.12))
-                            .clipShape(Capsule())
+                            .background(C.green.opacity(0.14), in: Capsule())
                     } else {
                         Button {
                             buyTarget = prop
@@ -239,11 +245,10 @@ struct MarketScreen: View {
                         } label: {
                             Text(canAfford ? "Satın Al" : "Yetersiz")
                                 .font(.btnSm)
-                                .foregroundColor(canAfford ? .black : C.textMuted)
+                                .foregroundStyle(canAfford ? .black : C.textMuted)
                                 .padding(.horizontal, Sp.md)
                                 .padding(.vertical, Sp.xs)
-                                .background(canAfford ? C.primary : C.bgElevated)
-                                .clipShape(Capsule())
+                                .background(canAfford ? C.primary : C.bgElevated, in: Capsule())
                         }
                         .disabled(!canAfford)
                     }
@@ -257,21 +262,21 @@ struct MarketScreen: View {
         Button(action: action) {
             Text(title)
                 .font(.btnSm)
-                .foregroundColor(active ? C.primary : C.textSub)
+                .foregroundStyle(active ? C.primary : C.textSub)
                 .padding(.horizontal, Sp.md)
                 .padding(.vertical, Sp.xs)
-                .background(active ? C.primary.opacity(0.15) : C.bgElevated)
-                .overlay(
-                    Capsule().stroke(active ? C.primary.opacity(0.5) : Color.clear, lineWidth: 1)
-                )
+                .background(active ? C.primary.opacity(0.16) : Color.clear)
+                .background(.ultraThinMaterial)
                 .clipShape(Capsule())
+                .overlay(Capsule().stroke(active ? C.primary.opacity(0.5) : C.border, lineWidth: 0.5))
         }
+        .buttonStyle(.plain)
     }
 
     private func doBuy(_ prop: Property) {
         let ok = game.buy(prop)
         let msg = ok ? "\(prop.name) satın alındı!" : "Yetersiz bakiye!"
-        withAnimation { toastMsg = msg }
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { toastMsg = msg }
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
             withAnimation { toastMsg = nil }
         }

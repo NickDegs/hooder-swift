@@ -1,27 +1,27 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var selectedTab = 0
     @EnvironmentObject var game: GameStore
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            // Tab pages — no system tab bar
-            Group {
-                switch selectedTab {
-                case 0: MapScreen().ignoresSafeArea()
-                case 1: PortfolioScreen()
-                case 2: MarketScreen()
-                case 3: RankingsScreen()
-                case 4: SettingsScreen()
-                default: MapScreen().ignoresSafeArea()
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        TabView {
+            MapScreen()
+                .tabItem { Label("Harita", systemImage: "map.fill") }
 
-            CustomTabBar(selectedTab: $selectedTab)
+            MarketScreen()
+                .tabItem { Label("Piyasa", systemImage: "storefront.fill") }
+
+            PortfolioScreen()
+                .tabItem { Label("Portföy", systemImage: "chart.line.uptrend.xyaxis") }
+
+            RankingsScreen()
+                .tabItem { Label("Sıralama", systemImage: "trophy.fill") }
+
+            SettingsScreen()
+                .tabItem { Label("Ayarlar", systemImage: "gearshape.fill") }
         }
-        .background(C.bg.ignoresSafeArea())
+        .tint(C.primary)
+        .toolbarBackground(.ultraThinMaterial, for: .tabBar)
         .preferredColorScheme(.dark)
     }
 }

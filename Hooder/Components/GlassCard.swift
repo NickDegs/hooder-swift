@@ -1,17 +1,20 @@
 import SwiftUI
 
 struct GlassCard<Content: View>: View {
+    var cornerRadius: CGFloat = R.lg
     var padding: CGFloat = Sp.lg
     @ViewBuilder let content: () -> Content
 
     var body: some View {
         content()
             .padding(padding)
-            .background(C.bgCard)
-            .overlay(
-                RoundedRectangle(cornerRadius: R.lg)
-                    .stroke(C.border, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: R.lg))
+            .background {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .stroke(C.specular, lineWidth: 0.5)
+                    }
+            }
     }
 }
