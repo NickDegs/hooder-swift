@@ -1,0 +1,25 @@
+name: TestFlight Setup
+
+on:
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  setup:
+    name: Setup Internal Testers
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup TestFlight internal group + tester
+        env:
+          ASC_KEY_ID:    ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY:   ${{ secrets.ASC_API_KEY }}
+        run: |
+          python3 -m venv /tmp/tf-venv
+          /tmp/tf-venv/bin/pip install pyjwt cryptography -q
+          /tmp/tf-venv/bin/python3 scripts/fix_testflight.py
