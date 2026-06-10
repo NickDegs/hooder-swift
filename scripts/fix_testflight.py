@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Sets up internal TestFlight group with auto-distribution and adds tester."""
-import os, time, json
+"""Adds tester + latest build to the internal TestFlight group."""
+import os, time, json, urllib.parse
 import urllib.request, urllib.error
 
 try:
@@ -26,119 +26,88 @@ BASE = "https://api.appstoreconnect.apple.com"
 
 def get(path):
     req = urllib.request.Request(f"{BASE}{path}", headers=HEADERS)
-    with urllib.request.urlopen(req) as r:
-        return json.loads(r.read())
+    try:
+        with urllib.request.urlopen(req) as r:
+            body = r.read()
+            return json.loads(body) if body else {}
+    except urllib.error.HTTPError as e:
+        print(f"  GET {e.code}: {e.read().decode('utf-8', errors='replace')[:200]}")
+        return {}
 
 def post(path, data):
     body = json.dumps(data).encode()
     req = urllib.request.Request(f"{BASE}{path}", data=body, headers=HEADERS, method="POST")
     try:
         with urllib.request.urlopen(req) as r:
-            return json.loads(r.read())
+            body = r.read()
+            return json.loads(body) if body else {}
     except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", errors="replace")
-        print(f"  POST {e.code}: {body}")
+        print(f"  POST {e.code}: {e.read().decode('utf-8', errors='replace')[:300]}")
         return None
 
-def patch(path, data):
-    body = json.dumps(data).encode()
-    req = urllib.request.Request(f"{BASE}{path}", data=body, headers=HEADERS, method="PATCH")
-    try:
-        with urllib.request.urlopen(req) as r:
-            return json.loads(r.read())
-    except urllib.error.HTTPError as e:
-        print(f"  PATCH {e.code}: {e.read().decode('utf-8', errors='replace')}")
-        return None
-
-# 1. List existing beta groups
-print(f"App ID: {app_id}")
+# 1. Find internal group
 print("Listing beta groups...")
 resp = get(f"/v1/apps/{app_id}/betaGroups")
 groups = resp.get("data", [])
 for g in groups:
-    attrs = g["attributes"]
-    print(f"  {g['id']} — {attrs.get('name')} internal={attrs.get('isInternalGroup')} autoDist={attrs.get('hasAccessToAllBuilds')}")
+    a = g["attributes"]
+    print(f"  {g['id']} — {a.get('name')} internal={a.get('isInternalGroup')} autoDist={a.get('hasAccessToAllBuilds')}")
 
-# 2. Find or create internal group
 internal_group = next((g for g in groups if g["attributes"].get("isInternalGroup")), None)
-
 if not internal_group:
-    print("No internal group found — creating...")
-    resp = post("/v1/betaGroups", {"data": {
-        "type": "betaGroups",
-        "attributes": {
-            "name": "Internal Testers",
-            "isInternalGroup": True,
-            "hasAccessToAllBuilds": True,
-            "publicLinkEnabled": False,
-        },
-        "relationships": {
-            "app": {"data": {"type": "apps", "id": app_id}}
-        }
-    }})
-    if resp:
-        internal_group = resp["data"]
-        print(f"  Created: {internal_group['id']}")
-else:
-    print(f"Found internal group: {internal_group['id']} — {internal_group['attributes'].get('name')}")
-    # Ensure auto-distribution is on
-    if not internal_group["attributes"].get("hasAccessToAllBuilds"):
-        print("  Enabling auto-distribution for all builds...")
-        patch(f"/v1/betaGroups/{internal_group['id']}", {"data": {
-            "type": "betaGroups",
-            "id": internal_group["id"],
-            "attributes": {"hasAccessToAllBuilds": True}
-        }})
+    print("ERROR: No internal group found")
+    exit(1)
 
 group_id = internal_group["id"]
+print(f"Using group: {internal_group['attributes']['name']} ({group_id})")
 
-# 3. Check if tester already in group
-print(f"Checking testers in group {group_id}...")
-resp = get(f"/v1/betaGroups/{group_id}/betaTesters?limit=50")
-testers = resp.get("data", [])
-existing_emails = [t["attributes"].get("email","") for t in testers]
-print(f"  Current testers: {existing_emails}")
+# 2. Find tester
+print(f"\nLooking up tester {tester_email}...")
+resp = get(f"/v1/betaTesters?filter[email]={urllib.parse.quote(tester_email)}&limit=1")
+testers_found = resp.get("data", [])
 
-if tester_email in existing_emails:
-    print(f"  {tester_email} already in group")
+if testers_found:
+    tester_id = testers_found[0]["id"]
+    attrs = testers_found[0]["attributes"]
+    print(f"  Found: {tester_id} — {attrs.get('firstName')} {attrs.get('lastName')}")
 else:
-    # Find tester by email
-    print(f"Looking up {tester_email}...")
-    import urllib.parse
-    resp = get(f"/v1/betaTesters?filter[email]={urllib.parse.quote(tester_email)}&limit=1")
-    testers_found = resp.get("data", [])
-    if testers_found:
-        tester_id = testers_found[0]["id"]
-        print(f"  Found tester ID: {tester_id}")
-        # Add to group
-        resp = post(f"/v1/betaGroups/{group_id}/relationships/betaTesters", {
-            "data": [{"type": "betaTesters", "id": tester_id}]
-        })
-        print(f"  Added {tester_email} to group")
-    else:
-        # Create/invite tester
-        print(f"  Tester not found — inviting {tester_email}...")
-        resp = post("/v1/betaTesters", {"data": {
-            "type": "betaTesters",
-            "attributes": {"email": tester_email, "firstName": "Baris", "lastName": "Daclen"},
-            "relationships": {"betaGroups": {"data": [{"type": "betaGroups", "id": group_id}]}}
-        }})
-        if resp:
-            print(f"  Invited: {resp['data']['id']}")
+    print(f"  Not found — creating tester...")
+    resp = post("/v1/betaTesters", {"data": {
+        "type": "betaTesters",
+        "attributes": {"email": tester_email, "firstName": "Baris", "lastName": "Daclen"},
+    }})
+    if not resp:
+        print("  Failed to create tester")
+        exit(1)
+    tester_id = resp["data"]["id"]
+    print(f"  Created: {tester_id}")
 
-# 4. Distribute latest build to internal group
-print("Finding latest processed build...")
-resp = get(f"/v1/builds?filter[app]={app_id}&filter[processingState]=VALID&sort=-uploadedDate&limit=1")
+# 3. Add tester to group
+print(f"\nAdding {tester_email} to group...")
+result = post(f"/v1/betaGroups/{group_id}/relationships/betaTesters", {
+    "data": [{"type": "betaTesters", "id": tester_id}]
+})
+if result is not None:
+    print("  Done (or already in group)")
+
+# 4. Find latest valid builds and add to group
+print("\nFinding latest processed builds...")
+resp = get(f"/v1/builds?filter[app]={app_id}&filter[processingState]=VALID&sort=-uploadedDate&limit=3")
 builds = resp.get("data", [])
-if builds:
-    build = builds[0]
-    build_id = build["id"]
-    attrs = build["attributes"]
-    print(f"  Build: {attrs.get('version')} — {attrs.get('uploadedDate')}")
-    # Add build to internal group
-    resp = post(f"/v1/betaGroups/{group_id}/relationships/builds", {
-        "data": [{"type": "builds", "id": build_id}]
-    })
-    print(f"  Build added to internal group")
+if not builds:
+    print("  No valid builds found")
+    exit(0)
 
-print("Done.")
+for b in builds:
+    a = b["attributes"]
+    print(f"  {b['id']} — v{a.get('version')} uploaded={a.get('uploadedDate')}")
+
+build_id = builds[0]["id"]
+print(f"\nAdding build {build_id} to group...")
+result = post(f"/v1/betaGroups/{group_id}/relationships/builds", {
+    "data": [{"type": "builds", "id": build_id}]
+})
+if result is not None:
+    print("  Done")
+
+print("\nSetup complete. Check TestFlight in a few minutes.")
