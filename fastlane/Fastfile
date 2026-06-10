@@ -12,8 +12,6 @@ COMMON_XCARGS = [
   "SWIFT_COMPILATION_MODE=wholemodule",
   "GCC_OPTIMIZATION_LEVEL=s",
   "MAPBOX_TOKEN=#{ENV.fetch('MAPBOX_TOKEN', '')}",
-  "GOOGLE_CLIENT_ID=#{ENV.fetch('GOOGLE_CLIENT_ID', '')}",
-  "GOOGLE_REVERSED_CLIENT_ID=#{ENV.fetch('GOOGLE_REVERSED_CLIENT_ID', '')}",
 ].join(" ")
 
 platform :ios do

@@ -1,13 +1,8 @@
 import SwiftUI
 import AuthenticationServices
-import GoogleSignIn
 
 struct LoginScreen: View {
     @EnvironmentObject var auth: AuthService
-
-    private var googleConfigured: Bool {
-        GIDSignIn.sharedInstance.configuration != nil
-    }
 
     var body: some View {
         ZStack {
@@ -63,26 +58,7 @@ struct LoginScreen: View {
                     .frame(height: 54)
                     .cornerRadius(R.lg)
 
-                    // Google Sign-In (only shown if configured)
-                    if googleConfigured {
-                        Button {
-                            auth.authError = nil
-                            auth.signInWithGoogle()
-                        } label: {
-                            HStack(spacing: Sp.md) {
-                                Image(systemName: "g.circle.fill")
-                                    .font(.title3)
-                                    .foregroundColor(Color(hex: "#EA4335"))
-                                Text("Google ile Giriş Yap")
-                                    .font(.bodyBold)
-                                    .foregroundColor(Color(hex: "#1f1f1f"))
-                            }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 54)
-                            .background(Color.white)
-                            .cornerRadius(R.lg)
-                        }
-                    }
+
                 }
                 .padding(.horizontal, Sp.x3)
 

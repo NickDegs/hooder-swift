@@ -1,6 +1,5 @@
 import Foundation
 import AuthenticationServices
-import GoogleSignIn
 
 @MainActor
 final class AuthService: ObservableObject {
@@ -44,7 +43,6 @@ final class AuthService: ObservableObject {
             guard let cred = authorization.credential as? ASAuthorizationAppleIDCredential else { return }
             let uid = "apple_" + cred.user
 
-            // Apple provides name+email only on first sign-in; fall back to stored values afterwards
             var name = [cred.fullName?.givenName, cred.fullName?.familyName]
                 .compactMap { $0 }.joined(separator: " ")
             if name.isEmpty {
@@ -66,51 +64,9 @@ final class AuthService: ObservableObject {
         }
     }
 
-    // MARK: - Google Sign-In
-
-    func signInWithGoogle() {
-        // Verify a real Google client ID is configured (must end with .apps.googleusercontent.com)
-        guard let cfg = GIDSignIn.sharedInstance.configuration,
-              cfg.clientID.hasSuffix(".apps.googleusercontent.com") else {
-            authError = "Google istemci kimliği yapılandırılmamış."
-            return
-        }
-
-        // Find the topmost visible view controller
-        guard let windowScene = UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .first(where: { $0.activationState == .foregroundActive }),
-              let rootVC = windowScene.keyWindow?.rootViewController else {
-            authError = "Pencere bulunamadı."
-            return
-        }
-        var topVC = rootVC
-        while let presented = topVC.presentedViewController { topVC = presented }
-
-        GIDSignIn.sharedInstance.signIn(withPresenting: topVC) { [weak self] result, error in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                if let error {
-                    let ns = error as NSError
-                    // Ignore user cancellation (GIDSignInError.canceled = -5)
-                    if ns.domain != "com.google.GIDSignIn" || ns.code != -5 {
-                        self.authError = error.localizedDescription
-                    }
-                    return
-                }
-                guard let user = result?.user else { return }
-                let uid  = "google_" + (user.userID ?? UUID().uuidString)
-                let name = user.profile?.name ?? "Oyuncu"
-                let mail = user.profile?.email ?? ""
-                self.completeSignIn(uid: uid, name: name, email: mail)
-            }
-        }
-    }
-
     // MARK: - Sign Out
 
     func signOut() {
-        GIDSignIn.sharedInstance.signOut()
         for key in ["auth_uid", "auth_name", "auth_email"] {
             kv.removeObject(forKey: key)
             local.removeObject(forKey: key)

@@ -90,8 +90,6 @@ jobs:
           ASC_API_KEY:               ${{ secrets.ASC_API_KEY }}
           ASC_TEAM_ID:               ${{ secrets.ASC_TEAM_ID }}
           MAPBOX_TOKEN:              ${{ secrets.MAPBOX_TOKEN }}
-          GOOGLE_CLIENT_ID:          ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_REVERSED_CLIENT_ID: ${{ secrets.GOOGLE_REVERSED_CLIENT_ID }}
           RELEASE_NOTES:             ${{ github.event.inputs.release_notes || 'Yeni güncelleme.' }}
           FL_SKIP_UPLOAD:            ${{ github.event.inputs.skip_upload == 'true' && 'true' || 'false' }}
         run: bundle exec fastlane release

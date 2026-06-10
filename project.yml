@@ -43,8 +43,6 @@ targets:
         CODE_SIGN_ENTITLEMENTS:       Hooder/Resources/Hooder.entitlements
         TARGETED_DEVICE_FAMILY:       "1,2"
         MAPBOX_TOKEN:                 ""
-        GOOGLE_CLIENT_ID:             ""
-        GOOGLE_REVERSED_CLIENT_ID:    ""
       configs:
         Debug:
           CODE_SIGN_STYLE:    Automatic
@@ -55,8 +53,6 @@ targets:
           PROVISIONING_PROFILE_APP: ""
     dependencies:
       - package: MapboxMaps
-      - package: GoogleSignIn
-        product: GoogleSignIn
     scheme:
       testTargets:        []
       gatherCoverageData: false
@@ -66,6 +62,3 @@ packages:
   MapboxMaps:
     url:  https://github.com/mapbox/mapbox-maps-ios
     from: "11.0.0"
-  GoogleSignIn:
-    url:  https://github.com/google/GoogleSignIn-iOS
-    from: "8.0.0"
