@@ -15,6 +15,7 @@ struct GameState: Codable {
     var xp:               Int
     var lastCollect:      Date
     var ownedProperties:  [OwnedPropertyState]
+    var claimedPlaces:    [ClaimedPlace]?
 }
 
 // MARK: - Persistence
@@ -34,28 +35,24 @@ final class PersistenceService {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         guard let data = try? encoder.encode(state) else { return }
-        let key = gameKey
-        local.set(data, forKey: key)
-        kv.set(data, forKey: key)
+        local.set(data, forKey: gameKey)
+        kv.set(data, forKey: gameKey)
         kv.synchronize()
     }
 
     func load() -> GameState? {
-        let key = gameKey
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        // iCloud first (survives reinstall), local fallback
-        if let data = kv.data(forKey: key),
+        if let data = kv.data(forKey: gameKey),
            let state = try? decoder.decode(GameState.self, from: data) { return state }
-        if let data = local.data(forKey: key),
+        if let data = local.data(forKey: gameKey),
            let state = try? decoder.decode(GameState.self, from: data) { return state }
         return nil
     }
 
     func delete() {
-        let key = gameKey
-        kv.removeObject(forKey: key)
+        kv.removeObject(forKey: gameKey)
         kv.synchronize()
-        local.removeObject(forKey: key)
+        local.removeObject(forKey: gameKey)
     }
 }

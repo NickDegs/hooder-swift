@@ -37,12 +37,15 @@ targets:
       - Hooder/Resources/Assets.xcassets
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER:    app.realvirtuality.landlord
-        DEVELOPMENT_TEAM:             AC4KJAUPL4
-        INFOPLIST_FILE:               Hooder/Resources/Info.plist
-        CODE_SIGN_ENTITLEMENTS:       Hooder/Resources/Hooder.entitlements
-        TARGETED_DEVICE_FAMILY:       "1,2"
-        MAPBOX_TOKEN:                 ""
+        PRODUCT_BUNDLE_IDENTIFIER:                   app.realvirtuality.landlord
+        DEVELOPMENT_TEAM:                            AC4KJAUPL4
+        INFOPLIST_FILE:                              Hooder/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS:                      Hooder/Resources/Hooder.entitlements
+        TARGETED_DEVICE_FAMILY:                      "1,2"
+        MAPBOX_TOKEN:                                ""
+        SUPPORTS_MACCATALYST:                        YES
+        DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER: NO
+        MACCATALYST_DEPLOYMENT_TARGET:               "13.0"
       configs:
         Debug:
           CODE_SIGN_STYLE:    Automatic

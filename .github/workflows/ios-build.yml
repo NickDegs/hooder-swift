@@ -1,31 +1,38 @@
-name: iOS Build & TestFlight
+name: iOS + macOS Build & Store
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
     inputs:
+      platform:
+        description: "Hedef platform"
+        required: false
+        default: "ios"
+        type: choice
+        options: [ios, macos, both]
       release_notes:
         description: "Sürüm notları"
         required: false
         default: "Yeni güncelleme."
       skip_upload:
-        description: "Sadece build (TestFlight yükleme)"
+        description: "Sadece build (Store'a yükleme)"
         type: boolean
         default: false
 
 concurrency:
-  group: ios-${{ github.ref }}
+  group: hooder-build-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
-  build:
-    name: Swift Build + TestFlight
+  build-ios:
+    name: iOS Build → TestFlight
     runs-on: macos-15
     timeout-minutes: 90
+    if: ${{ github.event.inputs.platform != 'macos' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -52,20 +59,18 @@ jobs:
           BUILD_NUM=$(date +%Y%m%d%H%M)
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUM" \
             Hooder/Resources/Info.plist
-          echo "Build number: $BUILD_NUM"
+          echo "BUILD_NUM=$BUILD_NUM" >> $GITHUB_ENV
 
       - name: Setup keychain + install cert
         env:
-          IOS_DIST_CERT_BASE64: ${{ secrets.IOS_DIST_CERT_BASE64 }}
-          IOS_DIST_CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+          IOS_DIST_CERT_BASE64:    ${{ secrets.IOS_DIST_CERT_BASE64 }}
+          IOS_DIST_CERT_PASSWORD:  ${{ secrets.IOS_DIST_CERT_PASSWORD }}
         run: |
           KEYCHAIN="$RUNNER_TEMP/build.keychain-db"
           security create-keychain -p "" "$KEYCHAIN"
           security set-keychain-settings -lut 21600 "$KEYCHAIN"
           security unlock-keychain -p "" "$KEYCHAIN"
           security list-keychains -d user -s "$KEYCHAIN" login.keychain-db
-
-          # Import distribution cert
           echo "$IOS_DIST_CERT_BASE64" | base64 --decode -o /tmp/dist.p12
           security import /tmp/dist.p12 -k "$KEYCHAIN" \
             -P "$IOS_DIST_CERT_PASSWORD" \
@@ -83,20 +88,138 @@ jobs:
           /tmp/cap-venv/bin/pip install pyjwt cryptography -q
           /tmp/cap-venv/bin/python3 scripts/enable_capabilities.py
 
-      - name: Build & upload
+      - name: Build iOS IPA → TestFlight
         env:
-          ASC_KEY_ID:                ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID:             ${{ secrets.ASC_ISSUER_ID }}
-          ASC_API_KEY:               ${{ secrets.ASC_API_KEY }}
-          ASC_TEAM_ID:               ${{ secrets.ASC_TEAM_ID }}
-          MAPBOX_TOKEN:              ${{ secrets.MAPBOX_TOKEN }}
-          RELEASE_NOTES:             ${{ github.event.inputs.release_notes || 'Yeni güncelleme.' }}
-          FL_SKIP_UPLOAD:            ${{ github.event.inputs.skip_upload == 'true' && 'true' || 'false' }}
+          ASC_KEY_ID:    ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY:   ${{ secrets.ASC_API_KEY }}
+          ASC_TEAM_ID:   ${{ secrets.ASC_TEAM_ID }}
+          MAPBOX_TOKEN:  ${{ secrets.MAPBOX_TOKEN }}
+          RELEASE_NOTES: ${{ github.event.inputs.release_notes || 'Yeni güncelleme.' }}
+          FL_SKIP_UPLOAD: ${{ github.event.inputs.skip_upload == 'true' && 'true' || 'false' }}
         run: bundle exec fastlane release
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Hooder-IPA-${{ github.run_number }}
+          name: Hooder-iOS-${{ github.run_number }}
           path: build/Hooder.ipa
+          retention-days: 14
+
+  build-macos:
+    name: macOS Build → Mac App Store
+    runs-on: macos-15
+    timeout-minutes: 90
+    if: ${{ github.event.inputs.platform == 'macos' || github.event.inputs.platform == 'both' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          LATEST=$(ls /Applications/ | grep -E '^Xcode_[0-9]' | sort -V | tail -1)
+          [ -n "$LATEST" ] && sudo xcode-select -s "/Applications/${LATEST}/Contents/Developer"
+          xcodebuild -version
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Install XcodeGen
+        run: brew install xcodegen || true
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Set build number
+        run: |
+          BUILD_NUM=$(date +%Y%m%d%H%M)
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUM" \
+            Hooder/Resources/Info.plist
+
+      - name: Setup keychain + install Mac cert
+        env:
+          MAC_DIST_CERT_BASE64:   ${{ secrets.MAC_DIST_CERT_BASE64 }}
+          MAC_DIST_CERT_PASSWORD: ${{ secrets.MAC_DIST_CERT_PASSWORD }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/mac-build.keychain-db"
+          security create-keychain -p "" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" login.keychain-db
+          echo "$MAC_DIST_CERT_BASE64" | base64 --decode -o /tmp/mac_dist.p12
+          security import /tmp/mac_dist.p12 -k "$KEYCHAIN" \
+            -P "$MAC_DIST_CERT_PASSWORD" \
+            -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" "$KEYCHAIN"
+          rm /tmp/mac_dist.p12
+
+      - name: Install provisioning profile (macOS)
+        env:
+          MAC_PROVISIONING_BASE64: ${{ secrets.MAC_PROVISIONING_BASE64 }}
+        run: |
+          PP_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PP_DIR"
+          echo "$MAC_PROVISIONING_BASE64" | base64 --decode -o "$PP_DIR/hooder_mac.provisionprofile"
+
+      - name: Build macOS pkg (Catalyst)
+        env:
+          MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+        run: |
+          xcodebuild archive \
+            -scheme Hooder \
+            -destination "platform=macOS,variant=Mac Catalyst" \
+            -archivePath "$RUNNER_TEMP/Hooder-macOS.xcarchive" \
+            MAPBOX_TOKEN="$MAPBOX_TOKEN" \
+            CODE_SIGN_STYLE=Manual \
+            "CODE_SIGN_IDENTITY=3rd Party Mac Developer Application" \
+            "PROVISIONING_PROFILE_APP=" \
+            -allowProvisioningUpdates
+
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/Hooder-macOS.xcarchive" \
+            -exportPath "$RUNNER_TEMP/Hooder-macOS-Export" \
+            -exportOptionsPlist - <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>mac-application</string>
+            <key>destination</key><string>export</string>
+          </dict>
+          </plist>
+          PLIST
+
+      - name: Upload to Mac App Store
+        if: ${{ github.event.inputs.skip_upload != 'true' }}
+        env:
+          ASC_KEY_ID:    ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY:   ${{ secrets.ASC_API_KEY }}
+        run: |
+          # Write API key to file
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$ASC_API_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
+
+          PKG=$(find "$RUNNER_TEMP/Hooder-macOS-Export" -name "*.pkg" | head -1)
+          [ -z "$PKG" ] && PKG=$(find "$RUNNER_TEMP/Hooder-macOS-Export" -name "*.app" | head -1)
+
+          xcrun altool --upload-app \
+            --type macos \
+            --file "$PKG" \
+            --apiKey "$ASC_KEY_ID" \
+            --apiIssuer "$ASC_ISSUER_ID" \
+            2>&1 || \
+          xcrun altool --upload-app \
+            --type macos \
+            --file "$PKG" \
+            --username "daclen10@icloud.com" \
+            --password "${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}" 2>&1
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Hooder-macOS-${{ github.run_number }}
+          path: ${{ runner.temp }}/Hooder-macOS-Export/
           retention-days: 14

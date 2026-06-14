@@ -3,25 +3,41 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var game: GameStore
 
-    @State private var selectedTab = 0
+    @State private var selectedTab      = 0
+    @State private var selectedHood:    HoodGroup?      = nil
+    @State private var claimInfo:       PlaceClaimInfo? = nil
+    @State private var selectedCity:    City?           = allCities.first
+    @State private var showCityPicker   = false
+    @State private var toastMsg:        String?
+    @State private var pendingBuy:      Property?
+    @State private var showBuyConfirm   = false
 
-    // Map state
-    @State private var selectedProperty: Property?
-    @State private var selectedCity: City? = allCities.first
-    @State private var showCityPicker = false
-    @State private var pendingBuy: Property?
-    @State private var showBuyConfirm = false
-    @State private var toastMsg: String?
+    private let allHoods = buildHoodGroups()
 
     private var isMapTab: Bool { selectedTab == 0 }
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            // ── 1. Persistent 3D satellite map (always rendered) ──────────
-            MapboxView(properties: allProperties, selectedProperty: $selectedProperty)
-                .ignoresSafeArea()
 
-            // ── 2. Map HUD (cash badge + city picker) ─────────────────────
+            // ── 1. Persistent 3D satellite map ────────────────────────────
+            MapboxView(allHoods: allHoods, highlightKey: selectedHood?.key)
+                .ignoresSafeArea()
+                .onReceive(NotificationCenter.default.publisher(for: .mapSelectHood)) { note in
+                    guard isMapTab, let h = note.userInfo?["hood"] as? HoodGroup else { return }
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        selectedHood = h
+                        claimInfo    = nil
+                    }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .mapSelectPlace)) { note in
+                    guard isMapTab, let info = note.userInfo?["info"] as? PlaceClaimInfo else { return }
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        claimInfo    = info
+                        selectedHood = nil
+                    }
+                }
+
+            // ── 2. Map HUD ────────────────────────────────────────────────
             VStack(spacing: 0) {
                 HStack {
                     cashBadge
@@ -32,75 +48,66 @@ struct ContentView: View {
                 .padding(.top, Sp.lg)
 
                 if showCityPicker {
-                    cityChipsRow
-                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    cityChipsRow.transition(.opacity.combined(with: .move(edge: .top)))
                 }
                 Spacer()
             }
             .opacity(isMapTab ? 1 : 0)
             .animation(.easeInOut(duration: 0.2), value: isMapTab)
 
-            // ── 3. Property detail panel (map pin tap) ────────────────────
-            if let prop = selectedProperty, isMapTab {
-                PropertyDetailPanel(
-                    property: prop,
-                    onClose: { withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { selectedProperty = nil } },
-                    onBuy:   { pendingBuy = prop; showBuyConfirm = true }
-                )
-                .padding(.bottom, 88)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .animation(.spring(response: 0.35, dampingFraction: 0.8), value: selectedProperty?.id)
-            }
-
-            // ── 4. Glass content panel for non-map tabs ───────────────────
-            if !isMapTab {
-                contentPanel
+            // ── 3. Panels (priority: claim > hood) ────────────────────────
+            if isMapTab, let info = claimInfo {
+                PlaceClaimPanelView(info: info, onClose: { withAnimation { claimInfo = nil } })
+                    .environmentObject(game)
+                    .padding(.bottom, 82)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(.spring(response: 0.38, dampingFraction: 0.85), value: claimInfo != nil)
+                    .id(info.lat + info.lng)
+            } else if isMapTab, let hood = selectedHood {
+                NeighborhoodPanelView(hood: hood, onClose: { withAnimation { selectedHood = nil } })
+                    .environmentObject(game)
+                    .padding(.bottom, 82)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(.spring(response: 0.38, dampingFraction: 0.85), value: hood.key)
+                    .id(hood.key)
             }
 
-            // ── 5. Map toast ───────────────────────────────────────────────
+            // ── 4. Screen panel (non-map tabs) ────────────────────────────
+            if !isMapTab {
+                contentPanel.transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+
+            // ── 5. Toast ──────────────────────────────────────────────────
             if let msg = toastMsg, isMapTab {
                 Text(msg)
-                    .font(.bodyBold)
-                    .foregroundStyle(C.text)
-                    .padding(.horizontal, Sp.lg)
-                    .padding(.vertical, Sp.md)
+                    .font(.bodyBold).foregroundStyle(C.text)
+                    .padding(.horizontal, Sp.lg).padding(.vertical, Sp.md)
                     .background(.ultraThinMaterial, in: Capsule())
                     .overlay(Capsule().stroke(C.border, lineWidth: 0.5))
                     .padding(.bottom, 100)
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
             }
 
-            // ── 6. Floating glass tab bar (always on top) ─────────────────
+            // ── 6. Tab bar ────────────────────────────────────────────────
             GlassTabBar(selectedTab: $selectedTab)
+                .onChange(of: selectedTab) { _ in
+                    if selectedTab != 0 {
+                        withAnimation { selectedHood = nil; claimInfo = nil }
+                    }
+                }
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.85), value: selectedTab)
         .preferredColorScheme(.dark)
-        .confirmationDialog(
-            pendingBuy.map { "Satın al: \($0.name)" } ?? "",
-            isPresented: $showBuyConfirm,
-            titleVisibility: .visible
-        ) {
-            if let prop = pendingBuy {
-                Button("Satın Al — \(formatPrice(prop.price))") { doBuy(prop) }
-                Button("İptal", role: .cancel) {}
-            }
-        } message: {
-            if let prop = pendingBuy {
-                Text("Mevcut bakiye: \(formatPrice(game.cash))")
-            }
-        }
     }
 
-    // MARK: – Map HUD
+    // MARK: – HUD
 
     private var cashBadge: some View {
         HStack(spacing: Sp.xs) {
             Image(systemName: "dollarsign.circle.fill").foregroundStyle(C.gold)
             Text(formatPrice(game.cash)).font(.bodyBold).foregroundStyle(C.text)
         }
-        .padding(.horizontal, Sp.md)
-        .padding(.vertical, Sp.sm)
+        .padding(.horizontal, Sp.md).padding(.vertical, Sp.sm)
         .background(.ultraThinMaterial, in: Capsule())
         .overlay(Capsule().stroke(C.specular, lineWidth: 0.5))
     }
@@ -111,13 +118,11 @@ struct ContentView: View {
         } label: {
             HStack(spacing: Sp.xs) {
                 Text(selectedCity?.flag ?? "🌍")
-                Text(selectedCity?.name ?? "Şehir")
-                    .font(.bodyBold).foregroundStyle(C.text)
+                Text(selectedCity?.name ?? "Şehir").font(.bodyBold).foregroundStyle(C.text)
                 Image(systemName: showCityPicker ? "chevron.up" : "chevron.down")
                     .font(.caption_).foregroundStyle(C.textSub)
             }
-            .padding(.horizontal, Sp.md)
-            .padding(.vertical, Sp.sm)
+            .padding(.horizontal, Sp.md).padding(.vertical, Sp.sm)
             .background(.ultraThinMaterial, in: Capsule())
             .overlay(Capsule().stroke(C.specular, lineWidth: 0.5))
         }
@@ -130,7 +135,7 @@ struct ContentView: View {
                 ForEach(allCities) { city in
                     Button {
                         selectedCity = city
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { showCityPicker = false }
+                        withAnimation { showCityPicker = false }
                         NotificationCenter.default.post(name: .flyToCity, object: nil, userInfo: ["city": city])
                     } label: {
                         HStack(spacing: 4) {
@@ -138,8 +143,7 @@ struct ContentView: View {
                             Text(city.name).font(.bodyBold)
                                 .foregroundStyle(selectedCity?.id == city.id ? C.primary : C.text)
                         }
-                        .padding(.horizontal, Sp.md)
-                        .padding(.vertical, Sp.sm)
+                        .padding(.horizontal, Sp.md).padding(.vertical, Sp.sm)
                         .background(selectedCity?.id == city.id ? C.primary.opacity(0.2) : Color.clear)
                         .background(.ultraThinMaterial)
                         .clipShape(Capsule())
@@ -148,8 +152,7 @@ struct ContentView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, Sp.lg)
-            .padding(.vertical, Sp.sm)
+            .padding(.horizontal, Sp.lg).padding(.vertical, Sp.sm)
         }
     }
 
@@ -157,14 +160,10 @@ struct ContentView: View {
 
     private var contentPanel: some View {
         VStack(spacing: 0) {
-            // Drag handle
-            Capsule()
-                .fill(Color.white.opacity(0.22))
+            Capsule().fill(Color.white.opacity(0.22))
                 .frame(width: 36, height: 4)
-                .padding(.top, Sp.md)
-                .padding(.bottom, 2)
+                .padding(.top, Sp.md).padding(.bottom, 2)
 
-            // Tab screen
             Group {
                 switch selectedTab {
                 case 1: MarketScreen()
@@ -188,14 +187,6 @@ struct ContentView: View {
         .shadow(color: .black.opacity(0.45), radius: 28, y: -6)
         .padding(.horizontal, Sp.xs)
         .padding(.bottom, 82)
-    }
-
-    // MARK: – Helpers
-
-    private func doBuy(_ prop: Property) {
-        let ok = game.buy(prop)
-        showToast(ok ? "\(prop.name) satın alındı!" : "Yetersiz bakiye!")
-        if ok { withAnimation { selectedProperty = nil } }
     }
 
     private func showToast(_ msg: String) {
