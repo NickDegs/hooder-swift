@@ -94,23 +94,6 @@ platform :ios do
     end
   end
 
-  desc "Mevcut en son build'i TestFlight external testers'a dağıt"
-  lane :distribute do
-    api_key = asc_key
-    upload_to_testflight(
-      api_key:                           api_key,
-      ipa:                               "./build/Hooder.ipa",
-      distribute_external:               true,
-      notify_external_testers:           true,
-      changelog:                         ENV.fetch("RELEASE_NOTES", "Yeni güncelleme: Swift native, 3D Mapbox harita."),
-      beta_app_description:              "Hooder — Gerçek zamanlı emlak yatırım oyunu. 35 mülk, 7 şehir, 3D Mapbox harita.",
-      beta_app_feedback_email:           "daclen100@gmail.com",
-      demo_account_required:             false,
-      reject_build_waiting_for_review:   false,
-      skip_waiting_for_build_processing: false,
-    )
-  end
-
   desc "Distribute to external TestFlight testers"
   lane :distribute do
     api_key = asc_key
