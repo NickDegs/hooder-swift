@@ -44,13 +44,25 @@ struct GlassTabBar: View {
         }
         .padding(.horizontal, Sp.sm)
         .padding(.vertical, Sp.xs)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: R.x2, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: R.x2, style: .continuous)
-                .stroke(C.specular, lineWidth: 0.5)
-        }
+        .modifier(TabBarGlass())
         .shadow(color: .black.opacity(0.3), radius: 14, y: 4)
         .padding(.horizontal, Sp.lg)
         .padding(.bottom, 12)
+    }
+}
+
+// iOS 26 Liquid Glass tab bar zemini; altında .ultraThinMaterial'a düşer.
+private struct TabBarGlass: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.glassEffect(.regular, in: .rect(cornerRadius: R.x2))
+        } else {
+            content
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: R.x2, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: R.x2, style: .continuous)
+                        .stroke(C.specular, lineWidth: 0.5)
+                }
+        }
     }
 }
