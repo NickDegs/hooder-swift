@@ -91,7 +91,7 @@ struct MapboxView: UIViewRepresentable {
             }
 
             // Live camera move → update nearest hood
-            moveToken = mapView.mapboxMap.onEvery(event: .cameraChanged) { [weak self] _ in
+            moveToken = mapView.mapboxMap.onCameraChanged.observe { [weak self] _ in
                 self?.handleCameraMove(mapView: mapView)
             }
         }
@@ -117,10 +117,10 @@ struct MapboxView: UIViewRepresentable {
                     if best == nil { best = features.first }
 
                     let props   = best?.queriedFeature.feature.properties
-                    let name    = (props?["name_en"]?.rawValue as? String)
-                        ?? (props?["name"]?.rawValue as? String)
+                    let name    = ((props?["name_en"] ?? nil)?.rawValue as? String)
+                        ?? ((props?["name"] ?? nil)?.rawValue as? String)
                         ?? ""
-                    let address = (props?["address"]?.rawValue as? String) ?? ""
+                    let address = ((props?["address"] ?? nil)?.rawValue as? String) ?? ""
                     let layerId = best?.layers.first ?? "land"
                     let typeStr = layerId
                         .replacingOccurrences(of: "-label",  with: "")
