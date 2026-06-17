@@ -1,4 +1,3 @@
-npm warn exec The following package was not found and will be installed: tsx@4.22.4
 import Foundation
 
 // MARK: - All Properties
