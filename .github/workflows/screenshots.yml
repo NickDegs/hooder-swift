@@ -1,0 +1,68 @@
+name: App Store Screenshots
+
+on:
+  workflow_dispatch:
+
+jobs:
+  shots:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          LATEST=$(ls /Applications/ | grep -E '^Xcode_[0-9]' | sort -V | tail -1)
+          [ -n "$LATEST" ] && sudo xcode-select -s "/Applications/${LATEST}/Contents/Developer"
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen || true
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Resolve SPM
+        run: |
+          xcodebuild -resolvePackageDependencies -project Hooder.xcodeproj -scheme Hooder \
+            -clonedSourcePackagesDirPath ./spm 2>&1 | tail -10
+
+      - name: Build for simulator
+        env:
+          MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+        run: |
+          xcodebuild -scheme Hooder -project Hooder.xcodeproj -configuration Release \
+            -sdk iphonesimulator -derivedDataPath ./build \
+            -clonedSourcePackagesDirPath ./spm \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO MAPBOX_TOKEN="$MAPBOX_TOKEN" \
+            build 2>&1 | tail -25
+          echo "APP_PATH=$(find ./build/Build/Products -name 'Hooder.app' -type d | head -1)" >> $GITHUB_ENV
+
+      - name: Capture screenshots
+        run: |
+          set -e
+          mkdir -p shots
+          capture () {
+            local DEV="$1"; local TAG="$2"
+            echo "=== $TAG ($DEV) ==="
+            UDID=$(xcrun simctl create "shots-$TAG" "$DEV" || true)
+            [ -z "$UDID" ] && { echo "cihaz oluşturulamadı: $DEV"; return 0; }
+            xcrun simctl boot "$UDID" || true
+            xcrun simctl bootstatus "$UDID" -b || sleep 20
+            xcrun simctl install "$UDID" "$APP_PATH"
+            SIMCTL_CHILD_HOODER_SHOTS=1 xcrun simctl launch "$UDID" app.realvirtuality.landlord || true
+            sleep 9   # harita + giriş otursun
+            for i in 1 2 3 4 5 6; do
+              xcrun simctl io "$UDID" screenshot "shots/${TAG}_${i}.png" || true
+              sleep 2.6
+            done
+            xcrun simctl shutdown "$UDID" || true
+          }
+          capture "iPhone 16 Pro Max" "iphone69"
+          capture "iPad Pro 13-inch (M4)" "ipad13"
+          ls -la shots/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: appstore-screenshots
+          path: shots/*.png

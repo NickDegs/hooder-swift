@@ -76,6 +76,11 @@ final class AuthService: ObservableObject {
         isAuthenticated = false
     }
 
+    // App Store ekran görüntüsü modu — otomatik misafir girişi (yalnız HOODER_SHOTS env'inde çağrılır)
+    func enterScreenshotMode() {
+        completeSignIn(uid: "shots_demo", name: "Yatırımcı", email: "")
+    }
+
     // MARK: - Helpers
 
     private func completeSignIn(uid: String, name: String, email: String) {

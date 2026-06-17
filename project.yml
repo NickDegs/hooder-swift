@@ -35,10 +35,11 @@ targets:
           - "**/.DS_Store"
     resources:
       - Hooder/Resources/Assets.xcassets
+      - Hooder/Resources/PrivacyInfo.xcprivacy
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER:                   app.realvirtuality.landlord
-        DEVELOPMENT_TEAM:                            AC4KJAUPL4
+        DEVELOPMENT_TEAM:                            SZF4T3P583
         INFOPLIST_FILE:                              Hooder/Resources/Info.plist
         CODE_SIGN_ENTITLEMENTS:                      Hooder/Resources/Hooder.entitlements
         TARGETED_DEVICE_FAMILY:                      "1,2"

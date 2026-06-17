@@ -98,6 +98,15 @@ struct ContentView: View {
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.85), value: selectedTab)
         .preferredColorScheme(.dark)
+        .onAppear {
+            // App Store ekran görüntüsü modu: sekmeleri otomatik gez (yalnız HOODER_SHOTS)
+            guard ProcessInfo.processInfo.environment["HOODER_SHOTS"] == "1" else { return }
+            var idx = 0
+            Timer.scheduledTimer(withTimeInterval: 2.6, repeats: true) { _ in
+                idx = (idx + 1) % 5
+                withAnimation { selectedTab = idx }
+            }
+        }
     }
 
     // MARK: – HUD

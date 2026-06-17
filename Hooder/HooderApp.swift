@@ -37,6 +37,12 @@ struct HooderApp: App {
                             gameLoaded = true
                         }
                     }
+                    .task {
+                        // App Store ekran görüntüsü modu: otomatik misafir girişi
+                        if ProcessInfo.processInfo.environment["HOODER_SHOTS"] == "1" {
+                            auth.enterScreenshotMode()
+                        }
+                    }
             }
         }
     }
