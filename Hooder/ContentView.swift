@@ -5,6 +5,7 @@ struct ContentView: View {
 
     @State private var selectedTab      = 0
     @State private var selectedHood:    HoodGroup?      = nil
+    @State private var dismissedHoodKey: String?        = nil   // kullanıcı kapattı → kamera hareketi yeniden açmasın
     @State private var claimInfo:       PlaceClaimInfo? = nil
     @State private var selectedCity:    City?           = allCities.first
     @State private var showCityPicker   = false
@@ -24,6 +25,9 @@ struct ContentView: View {
                 .ignoresSafeArea()
                 .onReceive(NotificationCenter.default.publisher(for: .mapSelectHood)) { note in
                     guard isMapTab, let h = note.userInfo?["hood"] as? HoodGroup else { return }
+                    // Kullanıcı bu mahalleyi kapattıysa, kamera hareketi onu yeniden AÇMASIN
+                    if h.key == dismissedHoodKey { return }
+                    dismissedHoodKey = nil
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                         selectedHood = h
                         claimInfo    = nil
@@ -64,7 +68,7 @@ struct ContentView: View {
                     .animation(.spring(response: 0.38, dampingFraction: 0.85), value: claimInfo != nil)
                     .id(info.lat + info.lng)
             } else if isMapTab, let hood = selectedHood {
-                NeighborhoodPanelView(hood: hood, onClose: { withAnimation { selectedHood = nil } })
+                NeighborhoodPanelView(hood: hood, onClose: { withAnimation { selectedHood = nil; dismissedHoodKey = hood.key } })
                     .environmentObject(game)
                     .padding(.bottom, 82)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
