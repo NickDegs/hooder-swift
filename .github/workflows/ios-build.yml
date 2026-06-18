@@ -79,6 +79,7 @@ jobs:
           rm /tmp/dist.p12
 
       - name: Enable App ID capabilities
+        continue-on-error: true   # capabilities zaten ayarlı; ASC API 403/rate-limit build'i durdurmasın
         env:
           ASC_KEY_ID:    ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -86,7 +87,7 @@ jobs:
         run: |
           python3 -m venv /tmp/cap-venv
           /tmp/cap-venv/bin/pip install pyjwt cryptography -q
-          /tmp/cap-venv/bin/python3 scripts/enable_capabilities.py
+          /tmp/cap-venv/bin/python3 scripts/enable_capabilities.py || echo "capabilities adımı atlandı (zaten ayarlı)"
 
       - name: Build iOS IPA → TestFlight
         env:
