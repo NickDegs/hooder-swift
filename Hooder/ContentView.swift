@@ -82,7 +82,7 @@ struct ContentView: View {
                 Text(msg)
                     .font(.bodyBold).foregroundStyle(C.text)
                     .padding(.horizontal, Sp.lg).padding(.vertical, Sp.md)
-                    .background(.ultraThinMaterial, in: Capsule())
+                    .liquidGlass(in: Capsule())
                     .overlay(Capsule().stroke(C.border, lineWidth: 0.5))
                     .padding(.bottom, 100)
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
@@ -117,7 +117,7 @@ struct ContentView: View {
             Text(formatPrice(game.cash)).font(.bodyBold).foregroundStyle(C.text)
         }
         .padding(.horizontal, Sp.md).padding(.vertical, Sp.sm)
-        .background(.ultraThinMaterial, in: Capsule())
+        .liquidGlass(in: Capsule())
         .overlay(Capsule().stroke(C.specular, lineWidth: 0.5))
     }
 
@@ -132,7 +132,7 @@ struct ContentView: View {
                     .font(.caption_).foregroundStyle(C.textSub)
             }
             .padding(.horizontal, Sp.md).padding(.vertical, Sp.sm)
-            .background(.ultraThinMaterial, in: Capsule())
+            .liquidGlass(in: Capsule())
             .overlay(Capsule().stroke(C.specular, lineWidth: 0.5))
         }
         .buttonStyle(.plain)
@@ -154,7 +154,7 @@ struct ContentView: View {
                         }
                         .padding(.horizontal, Sp.md).padding(.vertical, Sp.sm)
                         .background(selectedCity?.id == city.id ? C.primary.opacity(0.2) : Color.clear)
-                        .background(.ultraThinMaterial)
+                        .liquidGlassFill()
                         .clipShape(Capsule())
                         .overlay(Capsule().stroke(selectedCity?.id == city.id ? C.primary : C.border, lineWidth: 0.5))
                     }
@@ -186,7 +186,7 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity)
         .frame(height: UIScreen.main.bounds.height * 0.76)
-        .background(.ultraThinMaterial)
+        .liquidGlassFill()
         .overlay(alignment: .top) {
             RoundedRectangle(cornerRadius: R.x2, style: .continuous)
                 .stroke(C.specular, lineWidth: 0.5)

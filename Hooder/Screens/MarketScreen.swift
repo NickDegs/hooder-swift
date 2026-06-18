@@ -67,7 +67,7 @@ struct MarketScreen: View {
                     }
                     .padding(.horizontal, Sp.md)
                     .padding(.vertical, Sp.sm + 2)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: R.md, style: .continuous))
+                    .liquidGlass(in: RoundedRectangle(cornerRadius: R.md, style: .continuous))
                     .overlay {
                         RoundedRectangle(cornerRadius: R.md, style: .continuous)
                             .stroke(C.border, lineWidth: 0.5)
@@ -157,7 +157,7 @@ struct MarketScreen: View {
                         .foregroundStyle(C.text)
                         .padding(.horizontal, Sp.lg)
                         .padding(.vertical, Sp.md)
-                        .background(.ultraThinMaterial, in: Capsule())
+                        .liquidGlass(in: Capsule())
                         .overlay(Capsule().stroke(C.border, lineWidth: 0.5))
                         .padding(.bottom, Sp.x3)
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
@@ -267,7 +267,7 @@ struct MarketScreen: View {
                 .padding(.horizontal, Sp.md)
                 .padding(.vertical, Sp.xs)
                 .background(active ? C.primary.opacity(0.16) : Color.clear)
-                .background(.ultraThinMaterial)
+                .liquidGlassFill()
                 .clipShape(Capsule())
                 .overlay(Capsule().stroke(active ? C.primary.opacity(0.5) : C.border, lineWidth: 0.5))
         }

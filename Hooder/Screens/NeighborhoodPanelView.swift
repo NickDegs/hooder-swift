@@ -89,7 +89,7 @@ struct NeighborhoodPanelView: View {
                     }
                     .padding(.vertical, 10)
                 }
-                .background(.ultraThinMaterial)
+                .liquidGlassFill()
                 .overlay(alignment: .bottom) {
                     Divider().opacity(0.3)
                 }
@@ -106,7 +106,7 @@ struct NeighborhoodPanelView: View {
                     .padding(.bottom, 28)
                 }
             }
-            .background(.ultraThinMaterial)
+            .liquidGlassFill()
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)

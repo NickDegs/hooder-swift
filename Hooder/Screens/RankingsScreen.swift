@@ -144,7 +144,7 @@ struct RankingsScreen: View {
         .background {
             RoundedRectangle(cornerRadius: R.md, style: .continuous)
                 .fill(entry.isPlayer ? C.primary.opacity(0.08) : Color.clear)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: R.md, style: .continuous))
+                .liquidGlass(in: RoundedRectangle(cornerRadius: R.md, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: R.md, style: .continuous)
                         .stroke(entry.isPlayer ? C.primary.opacity(0.3) : C.border, lineWidth: 0.5)

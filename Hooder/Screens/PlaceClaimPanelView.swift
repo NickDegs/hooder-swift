@@ -93,7 +93,7 @@ struct PlaceClaimPanelView: View {
                     .padding(.top, Sp.md)
                     .padding(.bottom, Sp.md)
                 }
-                .background(.ultraThinMaterial)
+                .liquidGlassFill()
                 .overlay(alignment: .bottom) { Divider().opacity(0.3) }
 
                 // ── Stats ─────────────────────────────────────────────────
@@ -150,7 +150,7 @@ struct PlaceClaimPanelView: View {
                     .padding(.bottom, Sp.lg)
                 }
             }
-            .background(.ultraThinMaterial)
+            .liquidGlassFill()
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)

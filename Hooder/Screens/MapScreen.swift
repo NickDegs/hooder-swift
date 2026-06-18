@@ -294,7 +294,7 @@ struct PropertyDetailPanel: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Sp.lg)
                         .background(canAfford ? C.primary : Color.clear)
-                        .background(.ultraThinMaterial)
+                        .liquidGlassFill()
                         .clipShape(RoundedRectangle(cornerRadius: R.lg))
                     }
                     .disabled(!canAfford)
@@ -303,7 +303,7 @@ struct PropertyDetailPanel: View {
             .padding(.horizontal, Sp.lg)
             .padding(.bottom, Sp.lg)
         }
-        .background(.ultraThinMaterial)
+        .liquidGlassFill()
         .overlay { RoundedRectangle(cornerRadius: R.xl).stroke(C.specular, lineWidth: 0.5) }
         .clipShape(RoundedRectangle(cornerRadius: R.xl))
         .padding(.horizontal, Sp.md)

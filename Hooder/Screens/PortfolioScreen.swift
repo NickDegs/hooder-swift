@@ -62,7 +62,7 @@ struct PortfolioScreen: View {
                         .background {
                             RoundedRectangle(cornerRadius: R.lg, style: .continuous)
                                 .fill(game.pendingIncome > 0 ? C.green.opacity(0.1) : Color.clear)
-                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: R.lg, style: .continuous))
+                                .liquidGlass(in: RoundedRectangle(cornerRadius: R.lg, style: .continuous))
                                 .overlay {
                                     RoundedRectangle(cornerRadius: R.lg, style: .continuous)
                                         .stroke(game.pendingIncome > 0 ? C.green.opacity(0.3) : C.border, lineWidth: 0.5)

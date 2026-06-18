@@ -186,7 +186,7 @@ struct LoginScreen: View {
         }
         .padding(.horizontal, Sp.md)
         .padding(.vertical, Sp.xs)
-        .background(.ultraThinMaterial, in: Capsule())
+        .liquidGlass(in: Capsule())
         .overlay(Capsule().stroke(C.border, lineWidth: 0.5))
     }
 }
