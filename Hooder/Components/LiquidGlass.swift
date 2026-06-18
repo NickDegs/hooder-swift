@@ -35,4 +35,23 @@ extension View {
             self.background(.ultraThinMaterial, in: shape)
         }
     }
+
+    // GERÇEK native iOS 26 cam buton stili — yuvarlak kapsül, specular/mercek
+    // parlama + yumuşak basış animasyonu yerleşik. iOS<26'da materyal kapsüle düşer.
+    @ViewBuilder
+    func glassButton(prominent: Bool = false, tint: Color = C.primary) -> some View {
+        if #available(iOS 26.0, *) {
+            if prominent {
+                self.buttonStyle(.glassProminent).tint(tint).buttonBorderShape(.capsule)
+            } else {
+                self.buttonStyle(.glass).tint(tint).buttonBorderShape(.capsule)
+            }
+        } else {
+            if prominent {
+                self.buttonStyle(.plain).background(tint, in: Capsule())
+            } else {
+                self.buttonStyle(.plain).background(.ultraThinMaterial, in: Capsule())
+            }
+        }
+    }
 }

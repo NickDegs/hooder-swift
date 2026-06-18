@@ -147,16 +147,10 @@ struct OwnedPropertyCard: View {
                         Text("SAT — \(formatPrice(sellPrice))")
                             .font(.btnSm)
                     }
-                    .foregroundStyle(C.green)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, Sp.sm)
-                    .background(C.green.opacity(0.12), in: RoundedRectangle(cornerRadius: R.sm, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: R.sm, style: .continuous)
-                            .stroke(C.green.opacity(0.3), lineWidth: 0.5)
-                    }
+                    .padding(.vertical, Sp.xs)
                 }
-                .buttonStyle(.plain)
+                .glassButton(tint: C.green)
             }
         }
     }

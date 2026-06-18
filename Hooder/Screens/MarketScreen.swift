@@ -246,11 +246,10 @@ struct MarketScreen: View {
                         } label: {
                             Text(canAfford ? "Satın Al" : "Yetersiz")
                                 .font(.btnSm)
-                                .foregroundStyle(canAfford ? .black : C.textMuted)
-                                .padding(.horizontal, Sp.md)
-                                .padding(.vertical, Sp.xs)
-                                .background(canAfford ? C.primary : C.bgElevated, in: Capsule())
+                                .padding(.horizontal, Sp.xs)
                         }
+                        .glassButton(prominent: canAfford, tint: C.primary)
+                        .controlSize(.small)
                         .disabled(!canAfford)
                     }
                 }

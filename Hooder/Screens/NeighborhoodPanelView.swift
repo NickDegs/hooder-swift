@@ -232,29 +232,21 @@ struct NeighborhoodPanelView: View {
                 // Buy / Sell
                 if owned {
                     Button { doSell(prop) } label: {
-                        Text("Sat").font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(Color(hex: "#ff453a"))
-                            .padding(.horizontal, 12).padding(.vertical, 7)
-                            .background(Color(hex: "#ff453a").opacity(0.12))
-                            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(Color(hex: "#ff453a").opacity(0.3), lineWidth: 0.5))
-                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        Text("Sat").font(.system(size: 11, weight: .semibold))
+                            .padding(.horizontal, 4)
                     }
-                    .buttonStyle(.plain)
+                    .glassButton(tint: Color(hex: "#ff453a"))
+                    .controlSize(.small)
                 } else {
                     Button { doBuy(prop) } label: {
                         Text(canAfford ? "Al" : "🔒")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(canAfford ? accent : C.textMuted)
-                            .padding(.horizontal, 12).padding(.vertical, 7)
-                            .background(canAfford ? accent.opacity(0.12) : Color.white.opacity(0.06))
-                            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(canAfford ? accent.opacity(0.4) : Color.white.opacity(0.1), lineWidth: 0.5))
-                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .font(.system(size: 11, weight: .semibold))
+                            .padding(.horizontal, 4)
                     }
-                    .buttonStyle(.plain)
+                    .glassButton(prominent: canAfford, tint: accent)
+                    .controlSize(.small)
                     .disabled(!canAfford)
-                    .opacity(canAfford ? 1 : 0.65)
+                    .opacity(canAfford ? 1 : 0.6)
                 }
             }
             .padding(.horizontal, 13)
