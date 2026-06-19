@@ -29,8 +29,8 @@ struct OwnedProperty: Identifiable, Hashable {
 final class GameStore: ObservableObject {
 
     @Published var playerName:  String          = "Oyuncu"
-    @Published var cash:        Int             = 5_000_000
-    @Published var netWorth:    Int             = 5_000_000
+    @Published var cash:        Int             = 15_000_000
+    @Published var netWorth:    Int             = 15_000_000
     @Published var level:       Int             = 1
     @Published var xp:          Int             = 0
     @Published var owned:       [OwnedProperty] = []
@@ -111,8 +111,8 @@ final class GameStore: ObservableObject {
 
     func reset() {
         playerName  = "Oyuncu"
-        cash        = 5_000_000
-        netWorth    = 5_000_000
+        cash        = 15_000_000
+        netWorth    = 15_000_000
         owned       = []
         claimed     = []
         dailyIncome = 0
@@ -128,7 +128,7 @@ final class GameStore: ObservableObject {
         guard let state = PersistenceService.shared.load() else { return }
         playerName  = state.playerName
         // Migrate: old default was $50K
-        cash        = (state.cash == 50_000 && state.ownedProperties.isEmpty) ? 5_000_000 : state.cash
+        cash        = (state.cash == 50_000 && state.ownedProperties.isEmpty) ? 15_000_000 : state.cash
         level       = state.level
         xp          = state.xp
         lastCollect = state.lastCollect
