@@ -90,10 +90,8 @@ struct MapboxView: UIViewRepresentable {
                 self?.handleMapTap(gesture: gesture, mapView: mapView)
             }
 
-            // Live camera move → update nearest hood
-            moveToken = mapView.mapboxMap.onCameraChanged.observe { [weak self] _ in
-                self?.handleCameraMove(mapView: mapView)
-            }
+            // NOT: Kamera hareketinde panel AÇMA YOK (PWA gibi). Panel yalnız pin'e
+            // dokununca açılır (didDetectTappedAnnotations) — pan'de spam açılmaz.
         }
 
         private func handleMapTap(gesture: MapContentGestureContext, mapView: MapView) {
