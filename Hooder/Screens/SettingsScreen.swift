@@ -8,6 +8,7 @@ struct SettingsScreen: View {
     @State private var showAddCash = false
     @State private var showResetConfirm = false
     @State private var showSignOutConfirm = false
+    @State private var showDeleteConfirm  = false
 
     private var appVersion: String {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -115,6 +116,17 @@ struct SettingsScreen: View {
                                     .foregroundStyle(C.red)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
+
+                            Divider().background(C.border)
+
+                            Button {
+                                showDeleteConfirm = true
+                            } label: {
+                                Label("Hesabı Sil", systemImage: "trash")
+                                    .font(.bodyBold)
+                                    .foregroundStyle(C.red)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
                         }
                     }
 
@@ -186,6 +198,15 @@ struct SettingsScreen: View {
             Button("İptal", role: .cancel) {}
         } message: {
             Text("Çıkış yaparsan verilerini kaybetmezsin — tekrar giriş yapınca geri yüklenir.")
+        }
+        .confirmationDialog("Hesabı Sil", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+            Button("Hesabı Kalıcı Sil", role: .destructive) {
+                game.reset()
+                auth.deleteAccount()
+            }
+            Button("İptal", role: .cancel) {}
+        } message: {
+            Text("Hesabın ve tüm oyun verin (mülkler, nakit, ilerleme) KALICI olarak silinir. Bu işlem geri alınamaz.")
         }
     }
 

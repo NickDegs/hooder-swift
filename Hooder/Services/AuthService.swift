@@ -76,6 +76,18 @@ final class AuthService: ObservableObject {
         isAuthenticated = false
     }
 
+    // Hesabı sil (App Store Guideline 5.1.1(v)) — yerel kimlik + saklanan veriyi tamamen temizler.
+    // Backend hesabı yok; silme = tüm yerel/iCloud kimlik verisini kaldır + çıkış.
+    func deleteAccount() {
+        for key in ["auth_uid", "auth_name", "auth_email", "hooder_guest_uid"] {
+            kv.removeObject(forKey: key)
+            local.removeObject(forKey: key)
+        }
+        kv.synchronize()
+        userID = ""; displayName = ""; email = ""; authError = nil
+        isAuthenticated = false
+    }
+
     // App Store ekran görüntüsü modu — otomatik misafir girişi (yalnız HOODER_SHOTS env'inde çağrılır)
     func enterScreenshotMode() {
         completeSignIn(uid: "shots_demo", name: "Yatırımcı", email: "")
