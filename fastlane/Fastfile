@@ -90,10 +90,8 @@ platform :ios do
         ipa:                               "./build/Hooder.ipa",
         skip_waiting_for_build_processing: false,
         changelog:                         ENV.fetch("RELEASE_NOTES", "Yeni güncelleme."),
-        # Her build otomatik iç test grubuna atansın → TestFlight'ta hemen görünür
-        distribute_external:               false,
-        groups:                            ["Baris Ic Test"],
       )
+      # NOT: gruba atama workflow'da ASC API ile yapılır (pilot distribute internal grupta hata veriyor)
     end
   end
 

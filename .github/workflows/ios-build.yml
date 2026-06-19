@@ -100,6 +100,35 @@ jobs:
           FL_SKIP_UPLOAD: ${{ github.event.inputs.skip_upload == 'true' && 'true' || 'false' }}
         run: bundle exec fastlane release
 
+      # En yeni build'i iç test grubuna ata (TestFlight'ta hemen görünsün)
+      - name: Assign build to internal group
+        continue-on-error: true
+        env:
+          ASC_KEY_ID:    ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY:   ${{ secrets.ASC_API_KEY }}
+        run: |
+          printf '%s' "$ASC_API_KEY" > /tmp/asc.p8
+          node -e '
+            const {createSign}=require("crypto"), fs=require("fs");
+            const p8=fs.readFileSync("/tmp/asc.p8","utf8");
+            const APP="6776767786", GROUP="8efaee3a-4a69-41b0-b205-fd80c513051f";
+            const b64=o=>Buffer.from(JSON.stringify(o)).toString("base64").replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");
+            const now=Math.floor(Date.now()/1000);
+            const si=b64({alg:"ES256",kid:process.env.ASC_KEY_ID,typ:"JWT"})+"."+b64({iss:process.env.ASC_ISSUER_ID,iat:now,exp:now+600,aud:"appstoreconnect-v1"});
+            const s=createSign("SHA256");s.update(si);const der=s.sign(p8);
+            let o=2;const rl=der[o+1];o+=2;let r=der.slice(o,o+rl);o+=rl;o+=1;const sl=der[o];o+=1;let ss=der.slice(o,o+sl);
+            const pad=x=>{x=x[0]===0?x.slice(1):x;return Buffer.concat([Buffer.alloc(32-x.length),x])};
+            const jose=Buffer.concat([pad(r),pad(ss)]).toString("base64").replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");
+            const jwt=si+"."+jose, H={Authorization:"Bearer "+jwt,"Content-Type":"application/json"};
+            (async()=>{
+              const j=await (await fetch(`https://api.appstoreconnect.apple.com/v1/builds?filter[app]=${APP}&sort=-uploadedDate&limit=1`,{headers:H})).json();
+              const id=j.data[0].id;
+              const res=await fetch(`https://api.appstoreconnect.apple.com/v1/betaGroups/${GROUP}/relationships/builds`,{method:"POST",headers:H,body:JSON.stringify({data:[{type:"builds",id}]})});
+              console.log("grup atama:", res.status);
+            })();
+          '
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
